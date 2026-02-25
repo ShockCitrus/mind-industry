@@ -376,7 +376,7 @@
                 if (startPage > 1) {
                     const dots = document.createElement('span');
                     dots.innerText = '...';
-                    paginationContainer.appendChild(dots);
+                    paginationContainer1.appendChild(dots);
                 }
             }
 
@@ -388,7 +388,7 @@
                 if (endPage < totalPages - 2) {
                     const dots = document.createElement('span');
                     dots.innerText = '...';
-                    paginationContainer.appendChild(dots);
+                    paginationContainer1.appendChild(dots);
                 }
                 createButton(totalPages, totalPages - 1);
             }
@@ -575,7 +575,7 @@
                 if (startPage > 1) {
                     const dots = document.createElement('span');
                     dots.innerText = '...';
-                    paginationContainer.appendChild(dots);
+                    paginationContainer2.appendChild(dots);
                 }
             }
 
@@ -587,7 +587,7 @@
                 if (endPage < totalPages - 2) {
                     const dots = document.createElement('span');
                     dots.innerText = '...';
-                    paginationContainer.appendChild(dots);
+                    paginationContainer2.appendChild(dots);
                 }
                 createButton(totalPages, totalPages - 1);
             }
@@ -1679,9 +1679,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <div id="server_ollama" class="form-group mb-3 d-flex align-items-center">
                     <label for="server_ollama_input" class="me-2" style="width: 200px;">Ollama Server:</label>
-                    <select id="server_ollama_input" class="form-control flex-grow-1">
+                    <select id="server_ollama_input" class="form-control flex-grow-1" disabled>
                         {% for server in avaible_models.keys() %}
-                            {% if server == "kumo02" %}
+                            {% if server == "yiyuan" %}
                                 <option value="{{ server }}" selected>{{ server }}</option>
                             {% else %}
                                 <option value="{{ server }}">{{ server }}</option>

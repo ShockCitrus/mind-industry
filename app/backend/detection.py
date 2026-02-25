@@ -25,7 +25,8 @@ MIND_FRONTEND_URL = os.getenv('MIND_FRONTEND_URL', 'http://frontend:5000')
 
 OLLAMA_SERVER = {
     "kumo01": "http://kumo01.tsc.uc3m.es:11434",
-    "kumo02": "http://kumo02.tsc.uc3m.es:11434"
+    "kumo02": "http://kumo02.tsc.uc3m.es:11434",
+    "yiyuan": "https://yiyuan.tsc.uc3m.es"
 }
 ACTIVE_OLLAMA_SERVERS = []
 
@@ -196,11 +197,25 @@ def getTopicKeys():
     
 @detection_bp.route('/detection/models', methods=['GET'])
 def getModels():
+    """gemma3:4b"""
     try:
-        models_detection = ["qwen2.5:72b", "llama3.2", "llama3.1:8b-instruct-q8_0", "qwen:32b", "llama3.3:70b", "qwen2.5:7b-instruct", "qwen3:32b", "llama3.3:70b-instruct-q5_K_M", "llama3:8b"]
+        # models_detection = ["qwen2.5:72b", "llama3.2", "llama3.1:8b-instruct-q8_0", "qwen:32b", "llama3.3:70b", "qwen2.5:7b-instruct", "qwen3:32b", "llama3.3:70b-instruct-q5_K_M", "llama3:8b"]
+        models_detection = ["gemma3:4b",
+                            "mistral:7b",
+                            "mixtral:8x22b",
+                            "gemma2:9b",
+                            "llama3.1:8b",
+                            "llama4:16x17b",
+                            "qwen3:8b",
+                            "qwen3:32b",
+                            "falcon3:10b"
+                            ]
         avaible_models = {}
         for server in OLLAMA_SERVER.keys():
-            response = requests.get(f"{OLLAMA_SERVER[server]}/v1/models")
+            if server == "yiyuan":
+                response = requests.get(f"{OLLAMA_SERVER[server]}/v1/models", headers={'X-API-KEY': os.getenv('YIYUAN_API_KEY')})
+            else:
+                response = requests.get(f"{OLLAMA_SERVER[server]}/v1/models")
             if response.status_code == 200:
                 data = response.json()
                 models_server = [m['id'] for m in data['data']]  

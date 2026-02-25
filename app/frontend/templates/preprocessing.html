@@ -280,9 +280,9 @@
 
             <div id="server_ollama" class="form-group mb-3 d-flex align-items-center">
                 <label for="server_ollama_input" class="me-2" style="width: 200px;">Ollama Server:</label>
-                <select id="server_ollama_input" class="form-control flex-grow-1">
+                <select id="server_ollama_input" class="form-control flex-grow-1" disabled>
                     {% for server in models.keys() %}
-                        {% if server == "kumo02" %}
+                        {% if server == "yiyuan" %}
                             <option value="{{ server }}" selected>{{ server }}</option>
                         {% else %}
                             <option value="{{ server }}">{{ server }}</option>

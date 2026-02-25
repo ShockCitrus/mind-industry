@@ -87,7 +87,16 @@ llm:
       "qwen2.5:7b-instruct",
       "qwen3:32b",
       "llama3.3:70b-instruct-q5_K_M",
-      "llama3:8b"
+      "llama3:8b",
+      "gemma3:4b",
+      "mistral:7b",
+      "mixtral:8x22b",
+      "gemma2:9b",
+      "llama3.1:8b",
+      "llama4:16x17b",
+      "qwen3:8b",
+      "qwen3:32b",
+      "falcon3:10b"
     }
     host: http://kumo.tsc.uc3m.es:11434
   vllm:
@@ -99,3 +108,6 @@ llm:
     host: http://kumo02.tsc.uc3m.es:6000/v1
   llama_cpp:
     host: http://kumo02:11435/v1/chat/completions
+  yiyuan:
+    host: https://yiyuan.tsc.uc3m.es/api/generate
+    
