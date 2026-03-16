@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
-from mind.utils.utils import init_logger
+from mind.utils.utils import init_logger, get_optimization_settings
 
 
 class DataPreparer:
@@ -47,6 +47,7 @@ class DataPreparer:
     ):
         self._logger = logger if logger else init_logger(
             config_logger_path, __name__)
+        self._opt_settings = get_optimization_settings(str(config_logger_path), self._logger)
 
         # configure NLPipe
         self.preproc_script = Path(preproc_script) if preproc_script else None
@@ -174,7 +175,8 @@ class DataPreparer:
             "lang": df["lang"].astype(str).str.lower(),
         })
         tmp_parq = tmp_dir / f"{tag}_{lang_upper}.parquet"
-        work.to_parquet(tmp_parq, compression="gzip")
+        compression = self._opt_settings.get("parquet_compression", "gzip")
+        work.to_parquet(tmp_parq, compression=compression)
 
         # run NLPipe
         if self.preproc_script and self.config_path and self.stw_path:
@@ -190,7 +192,14 @@ class DataPreparer:
                 "--stw_path", str(self.stw_path),
             ]
             print("Running NLPipe:", " ".join(cmd))
-            subprocess.run(cmd, check=True)
+            # Ensure subprocess inherits PYTHONPATH with NLPipe source dir
+            import os as _os
+            env = _os.environ.copy()
+            nlpipe_src = str(Path(self.preproc_script).parent.parent)
+            existing = env.get("PYTHONPATH", "")
+            if nlpipe_src not in existing:
+                env["PYTHONPATH"] = f"{nlpipe_src}:{existing}" if existing else nlpipe_src
+            subprocess.run(cmd, check=True, env=env)
             print(f"✓ Preprocessed (lang={lang_upper})")
         else:
             print("Preprocessing skipped (not configured).")
@@ -255,8 +264,8 @@ class DataPreparer:
         comparison_df = pd.read_parquet(comparison_path)
 
         # Use lang column directly from schema
-        anchor_lang = anchor_df[self.schema["lang"]].iloc[0]
-        comp_lang = comparison_df[self.schema["lang"]].iloc[0]
+        anchor_lang = str(anchor_df[self.schema["lang"]].iloc[0]).upper()
+        comp_lang = str(comparison_df[self.schema["lang"]].iloc[0]).upper()
         self._logger.info(
             f"Anchor language: {anchor_lang}, Comparison language: {comp_lang}")
 
@@ -275,8 +284,9 @@ class DataPreparer:
         anc_parq = tmp_dir / f"anchor_{anchor_lang}.parquet"
         comp_parq = tmp_dir / f"comparison_{comp_lang}.parquet"
 
-        anc_norm.to_parquet(anc_parq, compression="gzip")
-        comp_norm.to_parquet(comp_parq, compression="gzip")
+        compression = self._opt_settings.get("parquet_compression", "gzip")
+        anc_norm.to_parquet(anc_parq, compression=compression)
+        comp_norm.to_parquet(comp_parq, compression=compression)
         self._logger.info(
             f"Saved anchor and comparison normalized parquets to {tmp_dir}")
 
@@ -377,6 +387,69 @@ class DataPreparer:
 
         return final_df
 
+    def format_monolingual(
+        self,
+        input_path: Path,
+        path_save: Optional[Path] = None
+    ) -> pd.DataFrame:
+        """
+        Format a monolingual dataset for use with LDATM topic modeling.
+
+        Unlike :meth:`format_dataframes` (which expects anchor + comparison
+        language files), this method takes a single parquet with one language,
+        runs NLPipe for lemmatization, and sets ``lemmas_tr`` to empty string
+        so the output schema matches the bilingual pipeline.
+
+        Parameters
+        ----------
+        input_path : Path
+            Path to a segmented parquet file containing a single language.
+        path_save : Path, optional
+            Where to save the resulting parquet.
+
+        Returns
+        -------
+        pd.DataFrame
+            The processed DataFrame with columns matching ``format_dataframes`` output.
+        """
+        self._logger.info("Starting format_monolingual process ...")
+
+        df = pd.read_parquet(input_path)
+        # If schema has a non-empty lang column name, use it; otherwise fall back to 'lang'
+        lang_col = self.schema.get("lang", "") or "lang"
+        if lang_col not in df.columns:
+            lang_col = "lang"
+        lang = str(df[lang_col].iloc[0]).upper()
+        self._logger.info(f"Detected monolingual dataset in language: {lang}")
+
+        # Normalize columns to common schema
+        norm = self._normalize(df)
+
+        # Run NLPipe to generate lemmas
+        self._logger.info(f"Running NLPipe for {lang} ...")
+        proc = self._preprocess_df(norm, lang, tag="mono", path_save=path_save)
+
+        # No cross-language translations for monolingual data
+        proc["lemmas_tr"] = ""
+
+        # Assign doc_id with language prefix (matching bilingual convention)
+        proc["doc_id"] = proc["lang"] + "_" + proc["chunk_id"].astype(str)
+
+        # Drop rows where lemmas is None (NLPipe may have failed for some)
+        proc = proc[~proc["lemmas"].isnull()]
+
+        # Validate
+        assert not proc["chunk_id"].duplicated().any(), (
+            f"Duplicate chunk_id values found: "
+            f"{proc[proc['chunk_id'].duplicated(keep=False)]['chunk_id'].tolist()}"
+        )
+        assert not proc["lemmas"].isnull().any(), "Null lemmas found"
+
+        if path_save:
+            proc.to_parquet(path_save)
+            self._logger.info(f"Saved monolingual dataset: {path_save}")
+
+        return proc
 
 if __name__ == "__main__":
 

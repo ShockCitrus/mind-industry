@@ -3,7 +3,10 @@ set -euo pipefail
 
 
 LLM_MODEL="llama3.3:70b" #"qwen:32b"
-LLM_SERVER="http://kumo02.tsc.uc3m.es:11434"
+# Set LLM_SERVER via environment variable before running, e.g.:
+#   export LLM_SERVER="http://your-ollama-host:11434"
+# Or override inline: LLM_SERVER="http://..." bash run_en_de.sh
+LLM_SERVER="${LLM_SERVER:?ERROR: LLM_SERVER is not set. Export it before running this script.}"
 TOPICS="7"
 SAMPLE_SIZE=200     
 PATH_SAVE="data/mind_runs/ende/results"

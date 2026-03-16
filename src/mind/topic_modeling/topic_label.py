@@ -14,7 +14,7 @@ class TopicLabel(object):
         lang1: str,
         lang2: str,
         model_folder: str,
-        llm_model: str,
+        llm_model: str = None,
         llm_server: str = None,
         config_path: Path = Path("config/config.yaml"),
         logger=None,
@@ -53,12 +53,24 @@ class TopicLabel(object):
         except Exception as e:
             self._logger.error(f"Failed to load environment variables: {e}")
 
-        self._prompter = Prompter(
-            model_type=llm_model,
-            llm_server=llm_server,
-            config_path=config_path,
-            openai_key=open_api_key
-        )
+        # Build Prompter: use explicit model if provided, otherwise fall back to
+        # the llm.default block in config.yaml (Prompter.from_config).
+        if llm_model:
+            self._prompter = Prompter(
+                model_type=llm_model,
+                llm_server=llm_server,
+                config_path=config_path,
+                openai_key=open_api_key
+            )
+        else:
+            self._logger.info(
+                "No llm_model specified — using llm.default from config.yaml"
+            )
+            self._prompter = Prompter.from_config(
+                config_path=config_path,
+                llm_server=llm_server,
+                logger=self._logger,
+            )
 
         path = self.config.get("prompts", {}).get("topic_label")
         if path is None:
@@ -140,7 +152,7 @@ class TopicLabel(object):
         top_docs_per_topic_id = {}
         for topic, doc_list in topic_docs.items():
             doc_list_sorted = sorted(doc_list, key=lambda x: x[1], reverse=True)
-            top_docs_per_topic_id[topic] = doc_list_sorted[3]
+            top_docs_per_topic_id[topic] = doc_list_sorted[:3]
 
         corpus_lang1 = self._load_corpus(f'{self._model_folder}/train_data/corpus_{self._lang1}.txt')
         corpus_lang2 = self._load_corpus(f'{self._model_folder}/train_data/corpus_{self._lang2}.txt')
@@ -181,25 +193,60 @@ class TopicLabel(object):
 
         top_docs_per_topic = self._most_representative_docs(path_topic)
 
-        # Prompting lang1
-        for k in range(len(topic_keys[self._lang1])):
-            template_formatted = self._prompt_label.format(
-                keywords=topic_keys[self._lang1][k],
-                docs='\n'.join(top_docs_per_topic[self._lang1][k])
-            )
-            res, _ = self._prompter.prompt(template_formatted)
-            print(res)
-            topic_labels[self._lang1].append(res)
+        # OPT-010: Use batched prompts if enabled in config
+        if self._prompter._batched_llm_calls:
+            self._logger.info("OPT-010: Using batched LLM calls for topic labeling")
+            
+            # Collect all prompts for lang1
+            prompts_lang1 = []
+            for k in range(len(topic_keys[self._lang1])):
+                template_formatted = self._prompt_label.format(
+                    keywords=topic_keys[self._lang1][k],
+                    docs='\n'.join(top_docs_per_topic[self._lang1][k])
+                )
+                prompts_lang1.append(template_formatted)
+            
+            # Batch execute lang1
+            results_lang1 = self._prompter.prompt_batch(prompts_lang1)
+            for res, _ in results_lang1:
+                print(res)
+                topic_labels[self._lang1].append(res)
+            
+            # Collect all prompts for lang2
+            prompts_lang2 = []
+            for k in range(len(topic_keys[self._lang2])):
+                template_formatted = self._prompt_label.format(
+                    keywords=topic_keys[self._lang2][k],
+                    docs='\n'.join(top_docs_per_topic[self._lang2][k])
+                )
+                prompts_lang2.append(template_formatted)
+            
+            # Batch execute lang2
+            results_lang2 = self._prompter.prompt_batch(prompts_lang2)
+            for res, _ in results_lang2:
+                print(res)
+                topic_labels[self._lang2].append(res)
+        else:
+            # Original sequential prompting
+            # Prompting lang1
+            for k in range(len(topic_keys[self._lang1])):
+                template_formatted = self._prompt_label.format(
+                    keywords=topic_keys[self._lang1][k],
+                    docs='\n'.join(top_docs_per_topic[self._lang1][k])
+                )
+                res, _ = self._prompter.prompt(template_formatted)
+                print(res)
+                topic_labels[self._lang1].append(res)
 
-        # Prompting lang2
-        for k in range(len(topic_keys[self._lang2])):
-            template_formatted = self._prompt_label.format(
-                keywords=topic_keys[self._lang2][k],
-                docs='\n'.join(top_docs_per_topic[self._lang2][k])
-            )
-            res, _ = self._prompter.prompt(template_formatted)
-            print(res)
-            topic_labels[self._lang2].append(res)
+            # Prompting lang2
+            for k in range(len(topic_keys[self._lang2])):
+                template_formatted = self._prompt_label.format(
+                    keywords=topic_keys[self._lang2][k],
+                    docs='\n'.join(top_docs_per_topic[self._lang2][k])
+                )
+                res, _ = self._prompter.prompt(template_formatted)
+                print(res)
+                topic_labels[self._lang2].append(res)
 
         # Write labels in model_folder
         with open(f'{path_topic}/labels_{self._lang1}.txt', 'w', encoding='utf-8') as f:
@@ -238,7 +285,7 @@ if __name__ == "__main__":
             lang2=args.lang2,
             model_folder=Path(args.model_folder),
             llm_model=args.llm_model,
-            llm_server=args.llm_model,
+            llm_server=args.llm_server,
             env_path=None,
         )
 

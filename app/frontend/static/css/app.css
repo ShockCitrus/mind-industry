@@ -1,0 +1,229 @@
+/* ==========================================================================
+   MIND "Deep Cipher" Design System
+   Overrides Halfmoon v2 / Bootstrap 5 CSS variables.
+   ========================================================================== */
+
+/* Font loaded via <link> in base.html — no @import needed */
+
+:root {
+  --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ---------- Dark Mode (default "Sci-Fi" feel) ---------- */
+[data-bs-theme="dark"] {
+  --bs-body-bg: #0f172a;
+  --bs-body-color: #f8fafc;
+  --bs-card-bg: #1e293b;
+  --bs-border-color: #334155;
+
+  --bs-primary: #06b6d4;
+  --bs-primary-rgb: 6, 182, 212;
+
+  --bs-secondary: #64748b;
+  --bs-secondary-rgb: 100, 116, 139;
+
+  --bs-success: #10b981;
+  --bs-success-rgb: 16, 185, 129;
+
+  --bs-warning: #f59e0b;
+  --bs-warning-rgb: 245, 158, 11;
+
+  --bs-danger: #ef4444;
+  --bs-danger-rgb: 239, 68, 68;
+
+  --bs-info: #3b82f6;
+  --bs-info-rgb: 59, 130, 246;
+}
+
+/* ---------- Light Mode ---------- */
+[data-bs-theme="light"] {
+  --bs-body-bg: #f8fafc;
+  --bs-body-color: #0f172a;
+  --bs-card-bg: #ffffff;
+  --bs-border-color: #e2e8f0;
+
+  --bs-primary: #0891b2;
+  /* Cyan-600 for better contrast on light */
+  --bs-primary-rgb: 8, 145, 178;
+}
+
+/* ---------- Typography ---------- */
+body {
+  font-family: var(--font-family-base);
+}
+
+/* ---------- Technical Gradient Utility ---------- */
+.bg-gradient-tech {
+  background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%) !important;
+}
+
+/* ---------- Card Styles ---------- */
+.card {
+  background-color: var(--bs-card-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* ---------- Modal Glassmorphism ---------- */
+.modal-backdrop {
+  background-color: rgba(15, 23, 42, 0.8) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* ---------- Nav link styling ---------- */
+.navbar-dark .navbar-nav .nav-link {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link:focus {
+  color: #ffffff;
+}
+
+.navbar-dark .navbar-nav .active>.nav-link,
+.navbar-dark .navbar-nav .nav-link.active,
+.navbar-dark .navbar-nav .nav-link.show,
+.navbar-dark .navbar-nav .show>.nav-link {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.navbar-dark .navbar-toggler {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.navbar-dark .navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255, 255, 255, 0.95)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* ---------- Theme toggle button ---------- */
+.btn-theme-toggle {
+  background: none;
+  border: none;
+  color: var(--bs-body-color);
+  font-size: 1.25rem;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.btn-theme-toggle:hover {
+  color: var(--bs-primary);
+}
+
+/* ---------- Mobile/Tablet Navbar (< 994px) ---------- */
+@media (max-width: 994px) {
+  .navbar-collapse {
+    background-color: rgba(15, 23, 42, 0.98);
+    /* Nearly opaque dark bg */
+    padding: 1rem;
+    border-top: 1px solid var(--bs-border-color);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+  }
+
+  .navbar-nav .nav-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 0.25rem;
+    text-align: center;
+    /* Center all items including buttons */
+  }
+
+  .navbar-nav .nav-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  /* Ensure button fills the item for proper centering/tapping */
+  .navbar-nav .nav-link.btn-theme-toggle {
+    width: 100%;
+    display: block;
+  }
+
+  .navbar-dark .navbar-nav .nav-link {
+    padding: 0.75rem 1rem;
+    /* Larger touch target */
+    font-size: 1.1rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .navbar-dark .navbar-nav .nav-link:hover,
+  .navbar-dark .navbar-nav .nav-link:active {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    border-radius: 0.375rem;
+  }
+}
+
+/* ---------- Toast Notifications ---------- */
+#toast-container .toast {
+  min-width: 300px;
+  font-size: 0.95rem;
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ---------- Page Fade-In ---------- */
+.container {
+  animation: fadeInPage 0.35s ease-out;
+}
+
+@keyframes fadeInPage {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- Footer ---------- */
+footer {
+  border-color: var(--bs-border-color) !important;
+}
+
+footer a {
+  color: var(--bs-primary);
+}
+
+footer a:hover {
+  text-decoration: underline !important;
+}
+
+/* ---------- Breadcrumb Styling ---------- */
+.breadcrumb-item a {
+  color: var(--bs-secondary);
+  text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+  color: var(--bs-primary);
+  text-decoration: underline;
+}
+
+.breadcrumb-item.active {
+  color: var(--bs-body-color);
+}

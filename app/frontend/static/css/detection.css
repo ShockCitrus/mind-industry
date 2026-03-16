@@ -1,0 +1,357 @@
+/* ==========================================================================
+   Detection Page Styles
+   Extracted from detection.html – Phase 6.1
+   ========================================================================== */
+
+/* ---------- Dataset / Topic Accordion ---------- */
+.dataset-header {
+    padding: 0.75rem 1.25rem;
+    font-size: 1.05rem;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dataset-item,
+.topic-item {
+    padding: 0.65rem 1.25rem;
+    font-size: 0.95rem;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+}
+
+.dataset-entry:hover {
+    background-color: var(--bs-secondary-bg) !important;
+    transition: background-color 0.2s ease;
+}
+
+.dataset-entry:hover a {
+    color: var(--bs-primary);
+    text-decoration: underline;
+}
+
+.dataset-accordion {
+    overflow-y: auto;
+    height: 100%;
+}
+
+.dataset-link {
+    color: var(--bs-body-color) !important;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.dataset-entry:hover .dataset-link {
+    color: var(--bs-primary) !important;
+    text-decoration: underline;
+}
+
+.hover-text-primary:hover {
+    color: var(--bs-primary);
+    cursor: pointer;
+}
+
+/* ---------- Jumbotron Scrollbar ---------- */
+.jumbotron ::-webkit-scrollbar {
+    width: 8px;
+}
+
+.jumbotron ::-webkit-scrollbar-thumb {
+    background-color: var(--bs-border-color);
+    border-radius: 4px;
+}
+
+.jumbotron ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--bs-secondary-color);
+}
+
+/* ---------- Topic Docs Panels ---------- */
+#topicDocs1,
+#topicDocs2 {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+#topicDocsContent1,
+#topicDocsContent2 {
+    flex: 1 1 0;
+    min-height: 0;
+    width: 100%;
+    padding: 0;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.topic-accordion {
+    overflow-y: auto !important;
+}
+
+/* ---------- Pagination ---------- */
+#paginationContainer1,
+#paginationContainer2 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+}
+
+#paginationContainer1 button,
+#paginationContainer2 button {
+    margin: 0;
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--bs-border-color);
+    background-color: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+    cursor: pointer;
+    text-align: center;
+    flex: 0 0 auto;
+}
+
+#paginationContainer1 button.active,
+#paginationContainer2 button.active {
+    background-color: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+
+#paginationContainer1 button:disabled,
+#paginationContainer2 button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#paginationContainer1 span,
+#paginationContainer2 span {
+    margin: 0 5px;
+    padding: 5px 0;
+}
+
+/* ---------- Results Table ---------- */
+th.th-with-filter {
+    position: relative;
+    padding-right: 32px !important;
+    min-width: 240px;
+    max-width: 240px;
+    white-space: nowrap;
+}
+
+.filter-icon-btn {
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-90%);
+    padding: 2px 6px;
+}
+
+.filter-checkbox {
+    margin-right: 6px;
+}
+
+#resultsTable {
+    table-layout: fixed;
+    width: max-content;
+}
+
+td.truncated {
+    width: 250px;
+    max-height: 120px;
+    overflow: hidden;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+#resultsTable td {
+    width: 250px !important;
+    max-height: 120px !important;
+    overflow: hidden !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+}
+
+/* ---------- Label Cells ---------- */
+.custom-select-container {
+    position: relative;
+    display: inline-block;
+    width: 240px;
+    height: 38px;
+}
+
+.final-label-select {
+    width: 100%;
+    height: 100%;
+    padding: 0.25em 0.75em;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    border: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    text-align: center;
+    cursor: pointer;
+    color: #fff;
+    background-clip: padding-box;
+}
+
+.custom-select-container .custom-arrow {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    font-size: 0.9em;
+    color: inherit;
+}
+
+.badge-label {
+    display: inline-block;
+    padding: 0.25em 0.75em;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    min-width: 240px;
+    text-align: center;
+    height: 38px;
+    line-height: 30px;
+}
+
+[data-label-value="CONTRADICTION"],
+.final-label-select option[value="CONTRADICTION"] {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+[data-label-value="CULTURAL_DISCREPANCY"],
+.final-label-select option[value="CULTURAL_DISCREPANCY"] {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+[data-label-value="NOT_ENOUGH_INFO"],
+.final-label-select option[value="NOT_ENOUGH_INFO"] {
+    background-color: #17a2b8;
+    color: #fff;
+}
+
+[data-label-value="NO_DISCREPANCY"],
+.final-label-select option[value="NO_DISCREPANCY"] {
+    background-color: #28a745;
+    color: #fff;
+}
+
+/* ---------- Log Terminal ---------- */
+#logTerminal {
+    background-color: #1e1e1e;
+    color: #00ff00;
+    font-family: monospace;
+    font-size: 0.85rem;
+    padding: 10px;
+    height: 300px;
+    overflow-y: auto;
+    border-radius: 5px;
+    white-space: pre-wrap;
+}
+
+/* ---------- Topic Tooltip ---------- */
+.tooltip-topic {
+    position: absolute;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    padding: 8px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    font-size: 14px;
+    z-index: 1000;
+}
+
+/* ---------- Exit Modal ---------- */
+.exit-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.exit-modal.show {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.exit-modal-dialog {
+    display: flex;
+    flex-direction: column;
+    max-width: 500px;
+    width: 90%;
+}
+
+.exit-modal-content {
+    border-radius: 8px;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.exit-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.exit-modal-body {
+    padding: 1rem 0;
+}
+
+.exit-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.exit-modal-btn {
+    min-width: 100px;
+    padding: 0.375rem 0.75rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.exit-modal-btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.exit-modal-btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.exit-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+}

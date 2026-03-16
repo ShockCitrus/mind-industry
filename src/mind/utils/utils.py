@@ -93,6 +93,79 @@ def load_yaml_config_file(
 
     return section_dict
 
+
+def get_optimization_settings(
+    config_file: str = "config/config.yaml",
+    logger: Optional[logging.Logger] = None
+) -> Dict:
+    """
+    Get the active optimization profile settings from config.
+    
+    Returns the merged settings from the optimization section, combining
+    the global settings (like parquet_compression) with the active profile.
+    
+    Parameters
+    ----------
+    config_file : str
+        Path to the YAML configuration file.
+    logger : logging.Logger, optional
+        Logger for messages.
+        
+    Returns
+    -------
+    Dict
+        Dictionary with optimization settings including:
+        - parquet_compression: str (e.g., 'zstd', 'gzip', 'snappy')
+        - chunk_size: int
+        - embedding_batch_size: int
+        - faiss_mmap: bool
+        - async_checkpoints: bool
+        etc.
+    """
+    # Default settings (fallback if config is missing)
+    defaults = {
+        "parquet_compression": "gzip",
+        "chunk_size": 10000,
+        "embedding_batch_size": 8,
+        "faiss_mmap": False,
+        "async_checkpoints": False,
+        "batched_embeddings": False,      # OPT-002
+        "lazy_corpus_loading": False,     # OPT-003
+        "batched_llm_calls": False,       # OPT-010
+    }
+    
+    try:
+        opt_config = load_yaml_config_file(config_file, "optimization", logger=logger)
+    except (FileNotFoundError, ValueError):
+        log_or_print("Optimization config not found, using defaults.", level="info", logger=logger)
+        return defaults
+    
+    if not opt_config:
+        return defaults
+    
+    # Get global settings
+    result = {
+        "parquet_compression": opt_config.get("parquet_compression", defaults["parquet_compression"]),
+    }
+    
+    # Get active profile
+    active_profile = opt_config.get("profile", "balanced")
+    profiles = opt_config.get("profiles", {})
+    profile_settings = profiles.get(active_profile, {})
+    
+    # Merge profile settings with defaults
+    for key, default_val in defaults.items():
+        if key not in result:
+            result[key] = profile_settings.get(key, default_val)
+        
+    # Add any extra profile-specific settings
+    for key, val in profile_settings.items():
+        if key not in result:
+            result[key] = val
+    
+    log_or_print(f"Loaded optimization profile '{active_profile}'.", level="info", logger=logger)
+    return result
+
 def init_logger(
     config_file: str,
     name: str = None

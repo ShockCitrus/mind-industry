@@ -25,7 +25,8 @@ import shutil
 import numpy as np
 from sklearn.preprocessing import normalize
 from scipy import sparse
-from src.utils.utils import file_lines
+from mind.utils.utils import file_lines
+import shutil as _shutil
 import warnings
 
 class LDATM(object):
@@ -256,7 +257,92 @@ class LDATM(object):
             self._get_more_info(mallet_out_folder_lang)
             self._extract_pipe() # Extract pipe for later inference
 
+        # Create PolylingualTM-compatible output files so the rest of the
+        # pipeline (detection, doc_representation, getTopicKeys) can consume
+        # them without special-casing.
+        self._create_compatible_outputs()
+
         return self._mallet_out_folder
+
+    def _create_compatible_outputs(self):
+        """
+        Create PolylingualTM-compatible output files in the flat
+        ``mallet_output/`` directory so that existing consumers
+        (detection, doc_representation, getTopicKeys) work unchanged.
+
+        Mapping for each language *lang*:
+        - ``mallet_output/{lang}/thetas.npz``  →  ``mallet_output/thetas_{lang}.npz``
+        - ``mallet_output/{lang}/topickeys.txt``  →  ``mallet_output/keys_{lang}.txt``
+          (converted from Mallet "topic_id  alpha  word1 word2 …" to one-line-per-topic
+          space-separated word list, matching PolylingualTM format)
+        - ``mallet_output/{lang}/doc-topics.txt``  →  ``mallet_output/doc-topics.txt``
+          (converted from dense tab-delimited to sparse "doc_id topic_id weight …" pairs,
+          matching PolylingualTM format)
+        """
+        self._logger.info("-- Creating PolylingualTM-compatible output files …")
+
+        for lang in self._langs:
+            lang_folder = self._mallet_out_folder / lang
+
+            # --- thetas ---
+            src_thetas = lang_folder / "thetas.npz"
+            dst_thetas = self._mallet_out_folder / f"thetas_{lang}.npz"
+            if src_thetas.exists():
+                _shutil.copy2(str(src_thetas), str(dst_thetas))
+                self._logger.info(f"  thetas: {dst_thetas}")
+
+            # --- keys ---
+            src_keys = lang_folder / "topickeys.txt"
+            dst_keys = self._mallet_out_folder / f"keys_{lang}.txt"
+            if src_keys.exists():
+                with src_keys.open("r", encoding="utf8") as fin, \
+                     dst_keys.open("w", encoding="utf8") as fout:
+                    for line in fin:
+                        # Mallet LDA topickeys.txt format:
+                        #   topic_id\talpha\tword1 word2 word3 …
+                        parts = line.strip().split("\t")
+                        if len(parts) >= 3:
+                            fout.write(parts[2].strip() + "\n")
+                        elif len(parts) == 2:
+                            # alpha omitted – whole rest is words
+                            fout.write(parts[1].strip() + "\n")
+                        else:
+                            fout.write(line.strip() + "\n")
+                self._logger.info(f"  keys:   {dst_keys}")
+
+            # --- doc-topics (dense → sparse) ---
+            # PolylingualTM format:
+            #   #doc … (header line)
+            #   doc_id topic_id weight topic_id weight …
+            # LDATM dense format (tab-delimited):
+            #   doc_index \t source \t p0 \t p1 \t p2 …
+            src_dt = lang_folder / "doc-topics.txt"
+            dst_dt = self._mallet_out_folder / "doc-topics.txt"
+            if src_dt.exists():
+                with src_dt.open("r", encoding="utf8") as fin, \
+                     dst_dt.open("w", encoding="utf8") as fout:
+                    fout.write("#doc source topic proportion ...\n")
+                    for line in fin:
+                        stripped = line.strip()
+                        if not stripped or stripped.startswith("#"):
+                            continue
+                        cols = stripped.split("\t")
+                        if len(cols) < 3:
+                            continue
+                        doc_id = cols[0]
+                        # cols[1] is <source>, cols[2:] are dense topic proportions
+                        pairs = []
+                        for topic_idx, val in enumerate(cols[2:]):
+                            try:
+                                weight = float(val)
+                            except ValueError:
+                                continue
+                            if weight > 0:
+                                pairs.append(f"{topic_idx} {weight}")
+                        fout.write(f"{doc_id} {' '.join(pairs)}\n")
+                self._logger.info(f"  doc-topics: {dst_dt}")
+
+        self._logger.info("-- PolylingualTM-compatible outputs created.")
 
     def _extract_pipe(self):
         """

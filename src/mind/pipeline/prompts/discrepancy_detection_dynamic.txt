@@ -1,0 +1,18 @@
+You will be given a QUESTION along with two responses (ANSWER_1 and ANSWER_2). Your task is to classify the relationship between the two answers, given the question, into one of the following categories:
+
+{categories_block}
+
+Response Format:
+- REASON: [Briefly explain why you selected this category]
+- DISCREPANCY_TYPE: [Choose ONLY one of the categories listed above]
+
+{examples_block}
+
+#### YOUR TASK ####
+
+QUESTION: {question}
+ANSWER_1: {answer_1}
+ANSWER_2: {answer_2}
+
+You MUST choose exactly one of the categories listed above. Do not invent new categories.
+Before answering, carefully consider the definitions and examples for each category.

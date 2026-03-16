@@ -37,7 +37,9 @@ dependencies = [
     "krippendorff",
     "irrCAC",
     "Wikipedia-API",
-    "dask"
+    "dask",
+    "langdetect",
+    "py7zr",
 ]
 
 [build-system]

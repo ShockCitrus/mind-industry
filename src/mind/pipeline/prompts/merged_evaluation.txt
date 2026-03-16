@@ -1,0 +1,67 @@
+You are an expert in factual analysis. You will be given a QUESTION, a SOURCE_ANSWER (derived from one passage), and a TARGET_PASSAGE. Your tasks are:
+
+1. Determine whether the TARGET_PASSAGE contains information to answer the QUESTION.
+   If NO, output DISCREPANCY_TYPE: NOT_ENOUGH_INFO and stop.
+
+2. If YES, extract the answer from the TARGET_PASSAGE and classify the relationship
+   between the SOURCE_ANSWER and the extracted answer.
+
+## Categories
+
+1. CULTURAL_DISCREPANCY: The answers reflect differences rooted in cultural norms, values, or regional practices — not factual errors. Both can be valid in different societies, regions, or traditions.
+
+2. CONTRADICTION: The answers provide directly opposing factual information — one explicitly denies or negates what the other asserts. This includes partial contradictions where the answers give different numbers, thresholds, dates, or categorical values for the same fact.
+
+3. NOT_ENOUGH_INFO: The target passage does not contain enough information to answer the question, or the extracted answer is too vague to compare meaningfully with the source answer.
+
+4. NO_DISCREPANCY: The answers are consistent, presenting aligned or complementary information.
+
+## Key distinction
+
+- CONTRADICTION requires that the two claims cannot both be true in any single context.
+- CULTURAL_DISCREPANCY applies when both can be true in different cultural or regional contexts.
+
+## Response format
+
+Think step-by-step, then respond with exactly these three fields:
+- TARGET_ANSWER: [Answer derived from the target passage, or "N/A" if not relevant]
+- REASON: [Your reasoning: what claims do the source and target answers make? Do they conflict?]
+- DISCREPANCY_TYPE: [Choose one of the categories listed above]
+
+## Examples
+
+QUESTION: Does the shot significantly increase the risk of blood clots?
+SOURCE_ANSWER: YES. The shot increases the risk of blood clots, making users three times more likely to experience them compared to those using a hormonal IUD.
+TARGET_PASSAGE: The shot does not contain estrogen and is considered safe for use immediately after childbirth. Unlike combination methods, the shot does not significantly raise the risk of blood clots and can be used by women with a history of clotting disorders.
+TARGET_ANSWER: NO. The shot does not contain estrogen and does not significantly raise the risk of blood clots.
+REASON: The source says the shot increases blood clot risk by 3x. The target directly denies this. Both cannot be true for the same medical product.
+DISCREPANCY_TYPE: CONTRADICTION
+
+QUESTION: Is the primary living space typically located above ground level?
+SOURCE_ANSWER: No, it is often subterranean or semi-subterranean, excluding cellars.
+TARGET_PASSAGE: Traditional houses in this region are built at ground level with the main living areas on the first floor. The construction uses local stone and timber to maintain comfortable temperatures year-round.
+TARGET_ANSWER: Yes, the primary living space is typically at ground level on the first floor.
+REASON: The source describes subterranean living spaces while the target describes above-ground ones. Both reflect valid regional building traditions.
+DISCREPANCY_TYPE: CULTURAL_DISCREPANCY
+
+QUESTION: Is global warming driving polar bears toward extinction?
+SOURCE_ANSWER: YES, global warming is driving polar bears toward extinction.
+TARGET_PASSAGE: Environmental changes due to global warming are causing the extinction or relocation of many species, including those in the Arctic where polar bears live. Rising temperatures have reduced sea ice by 40% in just three decades.
+TARGET_ANSWER: Yes, environmental changes due to global warming are negatively impacting Arctic species including polar bears through habitat loss.
+REASON: Both answers agree that global warming is negatively impacting polar bears. The target adds broader context but does not conflict.
+DISCREPANCY_TYPE: NO_DISCREPANCY
+
+QUESTION: Are feeding tubes typically employed for infants?
+SOURCE_ANSWER: YES, feeding tubes can be used for infants who cannot feed orally.
+TARGET_PASSAGE: Puede empezar a ofrecerle a su hijo pequeñas cantidades de agua alrededor de los 6 meses. Si vive en un lugar con agua fluorada, esto le ayudará a prevenir la aparición de caries.
+TARGET_ANSWER: N/A
+REASON: The target passage discusses introducing water to children at 6 months. It contains no information about feeding tubes.
+DISCREPANCY_TYPE: NOT_ENOUGH_INFO
+
+#### YOUR TASK ####
+
+QUESTION: {question}
+SOURCE_ANSWER: {answer_s}
+TARGET_PASSAGE: {target_passage}
+
+Think step-by-step: does the target passage answer the question? If so, do the source and target answers conflict?

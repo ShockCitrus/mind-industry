@@ -1,0 +1,52 @@
+# Version control
+.git
+.gitignore
+.gitmodules
+
+# Python virtual environments
+.venv
+venv
+env
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Documentation (not needed in containers)
+docs/
+*.md
+!requirements*.txt
+
+# Development and testing
+notebooks/
+ablation/
+figures_tables/
+aux_scripts/
+use_cases/
+
+# Local config files
+.env.local
+.env.development
+*.local
+
+# Build artifacts
+*.egg-info
+dist/
+build/
+
+# Cache directories
+.cache
+.pytest_cache
+.mypy_cache
+
+# OS files
+.DS_Store
+Thumbs.db

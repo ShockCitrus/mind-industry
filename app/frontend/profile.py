@@ -21,6 +21,15 @@ def profile():
     user_id = session.get('user_id')
     username = session.get('username')
 
+    # Fetch custom categories from auth service
+    categories_data = {"categories": [], "count": 0, "max": 20}
+    try:
+        cat_resp = requests.get(f"{AUTH_API_URL}/user/{user_id}/categories", timeout=5)
+        if cat_resp.status_code == 200:
+            categories_data = cat_resp.json()
+    except requests.exceptions.RequestException:
+        pass  # Non-critical — show empty list
+
     if request.method == 'POST':
 
         new_email = request.form.get('email')
@@ -55,7 +64,10 @@ def profile():
                 flash("Authentication service unavailable", "danger")
         else:
             flash("No changes made.", "info")
-    return render_template("profile.html", user_id=user_id, username=username)
+    return render_template("profile.html", user_id=user_id, username=username,
+                           categories=categories_data.get("categories", []),
+                           categories_count=categories_data.get("count", 0),
+                           categories_max=categories_data.get("max", 20))
 
 @profile_bp.route('/upload_dataset', methods=['POST'])
 def upload_dataset():
@@ -114,3 +126,64 @@ def upload_dataset():
             os.remove(temp_path)
 
     return jsonify({'message': backend_response}), 200
+
+
+@profile_bp.route('/erase_data', methods=['DELETE'])
+@login_required_custom
+def erase_data():
+    email = session.get("user_id")
+    try:
+        resp = requests.delete(f"{MIND_WORKER_URL}/user_data/erase", params={"email": email})
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "Backend service unavailable"}), 503
+
+
+# ---------------------------------------------------------------------------
+# Custom Category proxy routes
+# ---------------------------------------------------------------------------
+
+@profile_bp.route('/categories', methods=['GET'])
+@login_required_custom
+def list_categories():
+    user_id = session.get('user_id')
+    try:
+        resp = requests.get(f"{AUTH_API_URL}/user/{user_id}/categories", timeout=5)
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "Auth service unavailable"}), 503
+
+
+@profile_bp.route('/categories', methods=['POST'])
+@login_required_custom
+def create_category():
+    user_id = session.get('user_id')
+    data = request.get_json()
+    try:
+        resp = requests.post(f"{AUTH_API_URL}/user/{user_id}/categories", json=data, timeout=5)
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "Auth service unavailable"}), 503
+
+
+@profile_bp.route('/categories/<int:cat_id>', methods=['PUT'])
+@login_required_custom
+def update_category(cat_id):
+    user_id = session.get('user_id')
+    data = request.get_json()
+    try:
+        resp = requests.put(f"{AUTH_API_URL}/user/{user_id}/categories/{cat_id}", json=data, timeout=5)
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "Auth service unavailable"}), 503
+
+
+@profile_bp.route('/categories/<int:cat_id>', methods=['DELETE'])
+@login_required_custom
+def delete_category(cat_id):
+    user_id = session.get('user_id')
+    try:
+        resp = requests.delete(f"{AUTH_API_URL}/user/{user_id}/categories/{cat_id}", timeout=5)
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({"error": "Auth service unavailable"}), 503

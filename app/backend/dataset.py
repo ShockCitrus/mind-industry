@@ -159,6 +159,21 @@ def upload_dataset():
 
     if not file or not path or not email or not stage or not dataset_name or not extension:
         return jsonify({'error': 'Missing file or arg'}), 400
+
+    # Validate supported extensions early
+    SUPPORTED_EXTENSIONS = {
+        'csv', 'parquet',                            # structured
+        'zip', 'tar', 'gz', 'bz2', 'xz', '7z',     # archives
+        'md', 'yaml', 'yml', 'xml', 'txt',          # unstructured
+    }
+    ext_lower = extension.lower()
+    if ext_lower not in SUPPORTED_EXTENSIONS:
+        return jsonify({
+            'error': (
+                f"Unsupported file format: '.{extension}'. "
+                f"Supported formats: {', '.join('.' + e for e in sorted(SUPPORTED_EXTENSIONS))}"
+            )
+        }), 400
     
     output_dir = f"/data/{path}/"
 
@@ -185,22 +200,54 @@ def upload_dataset():
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # Save file
-    with open(f'{output_dir}/dataset', 'wb') as f:
-        f.write(file.read())
+    # Save uploaded file to a temporary location
+    import tempfile
+    temp_fd, temp_path = tempfile.mkstemp(suffix=f'.{extension}')
+    try:
+        with os.fdopen(temp_fd, 'wb') as tmp:
+            tmp.write(file.read())
 
-    # In case dataset is CSV
-    if extension == 'csv':
-        try:
-            if not sep:
-                return jsonify({'error': 'Missing separator for csv file'}), 400
-            
-            df_csv = pd.read_csv(f'{output_dir}/dataset', sep=sep)
-            df_csv.to_parquet(f'{output_dir}/dataset', engine='pyarrow')
-        except Exception as e:
-            print(e)
-            shutil.rmtree(output_dir)
-            return jsonify({'error': 'Couldn\'t save csv file'}), 400
+        # Route through the appropriate pipeline
+        if ext_lower in ('csv', 'parquet'):
+            # Legacy flow — direct CSV/parquet handling for backward compatibility
+            shutil.copy2(temp_path, f'{output_dir}/dataset')
+
+            if ext_lower == 'csv':
+                if not sep:
+                    shutil.rmtree(output_dir)
+                    return jsonify({'error': 'Missing separator for csv file'}), 400
+                try:
+                    df_csv = pd.read_csv(f'{output_dir}/dataset', sep=sep)
+                    df_csv.to_parquet(f'{output_dir}/dataset', engine='pyarrow')
+                except Exception as e:
+                    print(e)
+                    shutil.rmtree(output_dir)
+                    return jsonify({'error': "Couldn't save csv file"}), 400
+        else:
+            # New ingestion pipeline — archives and unstructured files
+            try:
+                from pathlib import Path as P
+                from mind.ingestion.pipeline import ingest_file
+                from mind.ingestion.parsers import create_default_registry
+
+                registry = create_default_registry()
+                df_ingested = ingest_file(
+                    P(temp_path),
+                    registry=registry,
+                    sep=sep or ',',
+                    text_column=textColumn,
+                )
+                df_ingested.to_parquet(f'{output_dir}/dataset', engine='pyarrow')
+            except ValueError as e:
+                shutil.rmtree(output_dir)
+                return jsonify({'error': str(e)}), 400
+            except Exception as e:
+                print(e)
+                shutil.rmtree(output_dir)
+                return jsonify({'error': f'Ingestion failed: {str(e)}'}), 500
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
     try:
         df_new_data = pd.DataFrame([new_data])
@@ -212,7 +259,90 @@ def upload_dataset():
     except Exception as e:
         print(e)
         shutil.rmtree(output_dir)
-        return jsonify({'error': 'Couldn\'t save file'}), 400
+        return jsonify({'error': "Couldn't save file"}), 400
+
+STAGE_FOLDERS = {
+    "1": "1_RawData",
+    "2": "2_PreprocessData",
+    "3": "3_TopicModel",
+    "4": "4_Detection",
+}
+
+
+@datasets_bp.route("/dataset/<email>/<stage>/<dataset_name>", methods=["DELETE"])
+def delete_dataset(email, stage, dataset_name):
+    folder = STAGE_FOLDERS.get(str(stage))
+    if not folder:
+        return jsonify({"error": f"Invalid stage: {stage}"}), 400
+
+    dataset_dir = f"/data/{email}/{folder}/{dataset_name}"
+    if not os.path.exists(dataset_dir):
+        return jsonify({"error": "Dataset not found"}), 404
+
+    try:
+        shutil.rmtree(dataset_dir)
+
+        if os.path.exists(DATASETS_STAGE):
+            df = pd.read_parquet(DATASETS_STAGE, engine="pyarrow")
+            df = df[
+                ~(
+                    (df["Usermail"] == email)
+                    & (df["Dataset"] == dataset_name)
+                    & (df["Stage"] == int(stage))
+                )
+            ]
+            df.to_parquet(DATASETS_STAGE, engine="pyarrow", index=False)
+
+        return jsonify({"message": f"Dataset '{dataset_name}' deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to delete dataset: {str(e)}"}), 500
+
+
+@datasets_bp.route("/detection/<email>/<TM>/<topics_slug>", methods=["DELETE"])
+def delete_detection(email, TM, topics_slug):
+    detection_base = f"/data/{email}/4_Detection"
+
+    # Detection results live inside topic-model sub-folders
+    target_dir = os.path.join(detection_base, TM, topics_slug)
+    if not os.path.exists(target_dir):
+        # Also check with _contradiction suffix
+        target_dir = os.path.join(detection_base, f"{TM}_contradiction", topics_slug)
+        if not os.path.exists(target_dir):
+            return jsonify({"error": "Detection run not found"}), 404
+
+    try:
+        shutil.rmtree(target_dir)
+
+        # Clean up empty parent folder
+        parent = os.path.dirname(target_dir)
+        if os.path.exists(parent) and not os.listdir(parent):
+            os.rmdir(parent)
+
+        return jsonify({"message": "Detection run deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to delete detection run: {str(e)}"}), 500
+
+
+@datasets_bp.route("/user_data/erase", methods=["DELETE"])
+def erase_user_data():
+    email = request.args.get("email")
+    if not email:
+        return jsonify({"error": "Missing email"}), 400
+
+    user_dir = f"/data/{email}"
+    try:
+        if os.path.exists(user_dir):
+            shutil.rmtree(user_dir)
+
+        if os.path.exists(DATASETS_STAGE):
+            df = pd.read_parquet(DATASETS_STAGE, engine="pyarrow")
+            df = df[df["Usermail"] != email]
+            df.to_parquet(DATASETS_STAGE, engine="pyarrow", index=False)
+
+        return jsonify({"message": "All data erased"}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to erase data: {str(e)}"}), 500
+
 
 def clean(obj):
     if isinstance(obj, np.ndarray):

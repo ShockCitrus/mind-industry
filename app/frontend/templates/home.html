@@ -3,159 +3,239 @@
 
 {% block content %}
 <style>
-.hero-full {
-    background-size: cover;
-    background-position: center;
-    width: 100vw;
-    max-height: 700px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    color: white;
-    padding: 40px 20px 80px 20px;
-    margin: 0;
-    
-    margin-left: calc(-50vw + 50%);
-    margin-right: calc(-50vw + 50%);
-}
-
-.hero-full h1,
-.hero-full h3,
-.hero-full p {
-    text-shadow: 1px 1px 5px rgba(0,0,0,0.7);
-}
-
-.hero-full h1 {
-    margin-bottom: 20px;
-}
-
-.hero-full h3 {
-    margin-bottom: 40px;
-}
-
-.hero-full p {
-    margin-bottom: 0;
-}
-
-@media (max-width: 768px) {
-    .hero-full {
-        max-height: 500px;
-        padding: 20px 10px 40px 10px;
-    }
-    .hero-full h1 {
-        margin-bottom: 15px;
-    }
-    .hero-full h3 {
-        margin-bottom: 30px;
-    }
-}
-
-.mt-5, .my-5 {
-    margin-top: 0rem !important;
-}
-
-.pills-container {
-    display: flex;
-    justify-content: space-between;
-    gap: 20px;
-    margin: 40px 0;
-}
-
-.pill {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    background-color: #f8f9fa;
-    border-radius: 20px;
-    padding: 20px;
-    flex: 1;
-    text-decoration: none;
-    color: inherit;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.pill:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-    text-decoration: none;
-}
-
-.pill img, .pill i {
-    width: 40px;
-    height: 40px;
-    margin-bottom: 10px;
-    font-size: 40px;
-}
-
-.pill h4 {
-    margin: 10px 0 5px 0;
-    font-size: 1.1em;
-    font-weight: bold;
-}
-
-.pill p {
-    margin: 0;
-    font-size: 0.9em;
-    color: #555;
-    font-weight: 300;
-}
-
-.pill-red {
-    color: #f1948a;
-    border: 2px solid #f1948a;
-}
-
-.pill-red:hover {
-    color: #f1948a;
-}
-
-.pill-blue {
-    color: #85c1e9;
-    border: 2px solid #85c1e9;
-}
-
-.pill-blue:hover {
-    color: #85c1e9;
-}
-
-.pill-green {
-    color: #82e0aa;
-    border: 2px solid #82e0aa;
-}
-
-.pill-green:hover {
-    color: #82e0aa;
-}
-
-.pill-orange {
-    color: #f5b041;
-    border: 2px solid #f5b041;
-}
-
-.pill-orange:hover {
-    color: #f5b041;
-}
-
-@media (max-width: 768px) {
-    .pills-container {
+    /* ---------- Hero Section ---------- */
+    .hero-section {
+        position: relative;
+        width: 100vw;
+        min-height: 340px;
+        display: flex;
         flex-direction: column;
-        gap: 15px;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 60px 20px 80px 20px;
+        margin-left: calc(-50vw + 50%);
+        margin-right: calc(-50vw + 50%);
+        overflow: hidden;
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 40%, #06b6d4 100%);
+    }
+
+    [data-bs-theme="light"] .hero-section {
+        background: linear-gradient(135deg, #0891b2 0%, #06b6d4 40%, #67e8f9 100%);
+    }
+
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at 20% 80%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    /* Animated grid pattern overlay */
+    .hero-section::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+    }
+
+    .hero-section h1,
+    .hero-section h3,
+    .hero-section p {
+        position: relative;
+        z-index: 1;
+        color: #f8fafc;
+    }
+
+    .hero-section h1 {
+        font-size: 2.8rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+        letter-spacing: -0.02em;
+    }
+
+    .hero-section h3 {
+        font-size: 1.3rem;
+        font-weight: 400;
+        opacity: 0.9;
+        margin-bottom: 16px;
+    }
+
+    .hero-section p {
+        font-size: 1rem;
+        opacity: 0.75;
+        max-width: 600px;
+        line-height: 1.6;
+    }
+
+    /* Accent line */
+    .hero-accent {
+        position: relative;
+        z-index: 1;
+        width: 80px;
+        height: 3px;
+        background: linear-gradient(90deg, #06b6d4, #3b82f6);
+        border-radius: 2px;
+        margin: 0 auto 20px auto;
+    }
+
+    @media (max-width: 768px) {
+        .hero-section {
+            min-height: 260px;
+            padding: 40px 16px 50px 16px;
+        }
+
+        .hero-section h1 {
+            font-size: 2rem;
+        }
+
+        .hero-section h3 {
+            font-size: 1.1rem;
+        }
+    }
+
+    /* ---------- Feature Pills ---------- */
+    .mt-5,
+    .my-5 {
+        margin-top: 0rem !important;
+    }
+
+    .pills-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        margin: 40px 0;
     }
 
     .pill {
-        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        background-color: var(--bs-card-bg);
+        border-radius: 16px;
+        padding: 24px 20px;
+        flex: 1;
+        text-decoration: none;
+        color: inherit;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        border: 1px solid var(--bs-border-color);
     }
-}
+
+    .pill:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        text-decoration: none;
+    }
+
+    .pill i {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 12px;
+        font-size: 2.4rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .pill h4 {
+        margin: 8px 0 6px 0;
+        font-size: 1.05em;
+        font-weight: 600;
+        color: var(--bs-body-color);
+    }
+
+    .pill p {
+        margin: 0;
+        font-size: 0.88em;
+        color: var(--bs-secondary-color, #64748b);
+        font-weight: 300;
+        line-height: 1.5;
+    }
+
+    /* Deep Cipher: Danger – warm coral (#ef4444) */
+    .pill-danger {
+        border-color: rgba(var(--bs-danger-rgb), 0.4);
+    }
+
+    .pill-danger i {
+        color: var(--bs-danger);
+    }
+
+    .pill-danger:hover {
+        border-color: var(--bs-danger);
+        box-shadow: 0 8px 24px rgba(var(--bs-danger-rgb), 0.15);
+    }
+
+    /* Deep Cipher: Primary – cyan (#06b6d4) */
+    .pill-primary {
+        border-color: rgba(var(--bs-primary-rgb), 0.4);
+    }
+
+    .pill-primary i {
+        color: var(--bs-primary);
+    }
+
+    .pill-primary:hover {
+        border-color: var(--bs-primary);
+        box-shadow: 0 8px 24px rgba(var(--bs-primary-rgb), 0.15);
+    }
+
+    /* Deep Cipher: Success – emerald (#10b981) */
+    .pill-success {
+        border-color: rgba(var(--bs-success-rgb), 0.4);
+    }
+
+    .pill-success i {
+        color: var(--bs-success);
+    }
+
+    .pill-success:hover {
+        border-color: var(--bs-success);
+        box-shadow: 0 8px 24px rgba(var(--bs-success-rgb), 0.15);
+    }
+
+    /* Deep Cipher: Info – blue (#3b82f6) */
+    .pill-info {
+        border-color: rgba(var(--bs-info-rgb), 0.4);
+    }
+
+    .pill-info i {
+        color: var(--bs-info);
+    }
+
+    .pill-info:hover {
+        border-color: var(--bs-info);
+        box-shadow: 0 8px 24px rgba(var(--bs-info-rgb), 0.15);
+    }
+
+    @media (max-width: 768px) {
+        .pills-container {
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .pill {
+            width: 100%;
+        }
+    }
 </style>
 
-<div class="hero-full" style="background-image: url('{{ url_for('static', filename='images/back_image.jpg') }}');">
+<!-- Hero Section: CSS gradient with grid overlay -->
+<div class="hero-section">
     <h1>Welcome to MIND</h1>
+    <div class="hero-accent"></div>
     <h3>Multilingual Inconsistent Notion Detection</h3>
-    <p>A topic-modeling and LLM-based pipeline designed to identify discrepancies across multilingual knowledge bases</p>
+    <p>A topic-modeling and LLM-based pipeline designed to identify discrepancies across multilingual knowledge bases
+    </p>
 </div>
 
 <br>
@@ -163,31 +243,31 @@
 
 {% if user_id %}
 <div class="pills-container">
-    <a href="/datasets" class="pill pill-red">
-        <i class="bi bi-database"></i>
+    <a href="/datasets" class="pill pill-danger">
+        <i class="ph ph-database"></i>
         <h4>Datasets for detection</h4>
         <p>Browse and preview your datasets available for analysis across the platform</p>
     </a>
-    <a href="/preprocessing" class="pill pill-blue">
-        <i class="bi bi-funnel"></i>
+    <a href="/preprocessing" class="pill pill-primary">
+        <i class="ph ph-funnel"></i>
         <h4>Preprocessing</h4>
         <p>Segment, translate and prepare your data, including topic modeling processes</p>
     </a>
-    <a href="/detection" class="pill pill-green">
-        <i class="bi bi-graph-up"></i>
+    <a href="/detection" class="pill pill-success">
+        <i class="ph ph-chart-line-up"></i>
         <h4>Detection</h4>
-        <p>Analyze multi-topic discrepancies and extract insights using MIND’s core detection features</p>
+        <p>Analyze multi-topic discrepancies and extract insights using MIND's core detection features</p>
     </a>
 </div>
 {% else %}
 <div class="pills-container">
-    <a href="/login" class="pill pill-blue">
-        <i class="bi bi-box-arrow-in-right"></i>
+    <a href="/login" class="pill pill-primary">
+        <i class="ph ph-sign-in"></i>
         <h4>Log In</h4>
         <p>Sign in to your account</p>
     </a>
-    <a href="/sign-up" class="pill pill-green">
-        <i class="bi bi-person-plus"></i>
+    <a href="/sign-up" class="pill pill-success">
+        <i class="ph ph-user-plus"></i>
         <h4>Sign Up</h4>
         <p>Create a new account</p>
     </a>
@@ -195,41 +275,6 @@
 {% endif %}
 
 <hr>
-
-<script>
-window.addEventListener('load', function() {
-    const hero = document.querySelector('.hero-full');
-    const img = new Image();
-    img.src = '{{ url_for('static', filename='images/back_image.jpg') }}';
-    img.crossOrigin = "Anonymous";
-
-    img.onload = function() {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, img.width, img.height);
-
-        const data = ctx.getImageData(0, 0, img.width, img.height).data;
-        let r=0,g=0,b=0,count=0;
-
-        for (let i=0; i<data.length; i+=4*100) { // cada 100 píxeles para velocidad
-            r += data[i];
-            g += data[i+1];
-            b += data[i+2];
-            count++;
-        }
-
-        r = r/count;
-        g = g/count;
-        b = b/count;
-
-        const luminance = (0.299*r + 0.587*g + 0.114*b)/255;
-
-        hero.style.color = luminance > 0.5 ? 'rgb(40, 40, 40)' : 'rgb(250, 250, 250)';
-    }
-});
-</script>
 
 {% include "about_us.html" %}
 

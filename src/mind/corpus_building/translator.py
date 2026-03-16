@@ -10,7 +10,7 @@ from tqdm import tqdm
 from transformers import pipeline, AutoTokenizer
 from datasets import Dataset
 
-from mind.utils.utils import init_logger
+from mind.utils.utils import init_logger, get_optimization_settings
 
 
 class Translator:
@@ -20,6 +20,7 @@ class Translator:
         logger=None
     ):
         self._logger = logger if logger else init_logger(config_path, __name__)
+        self._opt_settings = get_optimization_settings(str(config_path), self._logger)
         self.models = {}
         self.tokenizers = {}
         self.supported = {
@@ -45,41 +46,106 @@ class Translator:
         lang_col: str = "lang"
     ) -> pd.DataFrame:
         """
-        Split each paragraph into sentences, filtering out too-long chunks
-        based on the translation tokenizer for (src->tgt). Keeps all metadata columns.
+        Vectorized sentence splitting with token length filtering.
+        
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input DataFrame with text to split.
+        src_lang : str
+            Source language code.
+        tgt_lang : str
+            Target language code.
+        text_col : str
+            Column containing text to split.
+        lang_col : str
+            Column containing language labels.
+        
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with one row per sentence.
         """
-        tok = self.tokenizers[(src_lang, tgt_lang)]
+        import time
+        start = time.time()
+        
+        # Get tokenizer and max length
+        tok = self.tokenizers.get((src_lang, tgt_lang))
+        if tok is None:
+            raise ValueError(f"No tokenizer for {src_lang}->{tgt_lang}")
+        
         model_max = getattr(tok, "model_max_length", 512)
-        max_tokens = int(model_max * 0.9)
-
-        def token_len(text: str) -> int:
-            return len(tok.encode(text, truncation=False))
-
+        max_tokens = int(model_max * 0.9)  # Leave margin
+        
+        # Store original columns
         orig_cols = list(df.columns)
-        rows = []
-        dropped_ids = set()
-
-        for _, row in df.iterrows():
-            sentences = [s for s in str(row[text_col]).split(". ") if s]
-            any_kept = False
-            for j, s in enumerate(sentences):
-                if token_len(s) < max_tokens:
-                    entry = {col: row.get(col, None) for col in orig_cols}
-                    entry[text_col] = s
-                    entry[lang_col] = row[lang_col]
-                    entry['index'] = None  # will set below
-                    entry['id_preproc'] = f"{row.get('id_preproc', '')}_{j}"
-                    rows.append(entry)
-                    any_kept = True
-            if not any_kept:
-                dropped_ids.add(row.get("id_preproc", None))
-
-        if dropped_ids:
-            df = df[~df["id_preproc"].isin(dropped_ids)].reset_index(drop=True)
-
-        out = pd.DataFrame(rows)
-        out["index"] = range(len(out))
-        return out
+        df = df.copy()
+        
+        # Preserve original ID for tracking
+        id_col = "id_preproc" if "id_preproc" in df.columns else df.index.name or "index"
+        df["_orig_id"] = df.get(id_col, df.index.astype(str)).astype(str)
+        
+        # VECTORIZED: Split text into sentences
+        # Using regex to handle ". " and ".\n" patterns
+        df["_sentences"] = df[text_col].astype(str).str.split(r'(?<=[.!?])\s+', regex=True)
+        
+        # VECTORIZED: Explode to one row per sentence
+        df = df.explode("_sentences", ignore_index=True)
+        
+        # Filter empty sentences
+        df = df[
+            (df["_sentences"].notna()) & 
+            (df["_sentences"].str.strip() != "")
+        ].copy()
+        
+        if df.empty:
+            self._logger.warning("No sentences after splitting")
+            return df
+        
+        # Calculate token lengths in batch (this is the expensive part)
+        self._logger.info(f"Calculating token lengths for {len(df)} sentences...")
+        sentences = df["_sentences"].tolist()
+        
+        # Batch tokenization for efficiency
+        batch_size = 1000
+        token_lengths = []
+        for i in range(0, len(sentences), batch_size):
+            batch = sentences[i:i + batch_size]
+            lengths = [len(tok.encode(s, truncation=False)) for s in batch]
+            token_lengths.extend(lengths)
+        
+        df["_token_len"] = token_lengths
+        
+        # Filter by token length
+        original_count = len(df)
+        df = df[df["_token_len"] < max_tokens].copy()
+        filtered_count = original_count - len(df)
+        
+        if filtered_count > 0:
+            self._logger.info(f"Filtered {filtered_count} sentences exceeding {max_tokens} tokens")
+        
+        # Track dropped document IDs
+        if df.empty:
+            return df
+        
+        # Generate new id_preproc with sentence index
+        df["_sent_idx"] = df.groupby("_orig_id").cumcount()
+        df["id_preproc"] = df["_orig_id"] + "_" + df["_sent_idx"].astype(str)
+        
+        # Update text column with sentence
+        df[text_col] = df["_sentences"]
+        
+        # Clean up temporary columns
+        df = df.drop(columns=["_sentences", "_orig_id", "_token_len", "_sent_idx"])
+        df["index"] = range(len(df))
+        
+        elapsed = time.time() - start
+        self._logger.info(
+            f"Vectorized sentence split: {len(df)} sentences in {elapsed:.2f}s "
+            f"({len(df)/elapsed:.1f} sent/sec)"
+        )
+        
+        return df
 
     def _translate_split(
         self,
@@ -195,7 +261,8 @@ class Translator:
         self._logger.info(f"Loading dataframe from {path_df}")
         df = pd.read_parquet(path_df)
         self._logger.info(f"Loaded dataframe with {len(df)} rows.")
-        if src_lang not in df[lang_col].unique():
+        df[lang_col] = df[lang_col].astype(str).str.lower()
+        if src_lang.lower() not in df[lang_col].unique():
             raise ValueError(
                 f"Source language '{src_lang}' not found in column '{lang_col}'")
 
@@ -225,8 +292,9 @@ class Translator:
         self.translated_df = pd.concat([df, merged], ignore_index=True)
 
         if save_path is not None:
-            self.translated_df.to_parquet(save_path, compression="gzip")
-            self._logger.info(f"Saved translated DataFrame to {save_path}")
+            compression = self._opt_settings.get("parquet_compression", "gzip")
+            self.translated_df.to_parquet(save_path, compression=compression)
+            self._logger.info(f"Saved translated DataFrame to {save_path} (compression: {compression})")
 
         return self.translated_df
 

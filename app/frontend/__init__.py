@@ -18,6 +18,28 @@ def create_app():
 
     CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for all routes
 
+    # Throttle noisy health-check log lines
+    import logging
+    import time
+
+    class ThrottleHealthCheckFilter(logging.Filter):
+        """Only log /api/preprocess_status once every `interval` seconds."""
+        def __init__(self, interval=30):
+            super().__init__()
+            self._interval = interval
+            self._last_logged = 0
+
+        def filter(self, record):
+            msg = record.getMessage()
+            if "/api/preprocess_status" in msg:
+                now = time.monotonic()
+                if now - self._last_logged < self._interval:
+                    return False
+                self._last_logged = now
+            return True
+
+    logging.getLogger("werkzeug").addFilter(ThrottleHealthCheckFilter(30))
+
     from auth import auth
     from views import views
     from profile import profile_bp

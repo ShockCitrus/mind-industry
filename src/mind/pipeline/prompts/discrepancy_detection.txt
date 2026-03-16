@@ -1,49 +1,62 @@
-You will be given a QUESTION along with two responses (ANSWER_1 and ANSWER_2). Your task is to classify the relationship between the two answers, given the question, into one of the following categories:
+You are an expert in factual analysis. Given a QUESTION and two responses (ANSWER_1 and ANSWER_2), classify the relationship between them into exactly one category.
 
-1. CULTURAL_DISCREPANCY: The answers reflect differences that stem from cultural norms, values, or societal perspectives rather than factual contradictions. This includes variations in common practices, traditions, or expectations that depend on cultural context. If both statements can be valid in different regions, societies, or traditions, classify them here rather than as CONTRADICTION.
+## Categories
 
-2. CONTRADICTION: The answers provide directly opposing factual information, meaning one explicitly denies what the other asserts. A contradiction occurs only if both statements cannot be true in any context. Differences in reasoning, examples, or perspectives do not count as contradictions unless they fundamentally conflict. If both statements could be true in different settings (e.g., due to geography, culture, or historical variation), classify them as CULTURAL_DISCREPANCY instead.
+1. CULTURAL_DISCREPANCY: The answers reflect differences rooted in cultural norms, values, or regional practices — not factual errors. Both can be valid in different societies, regions, or traditions.
 
-3. NOT_ENOUGH_INFO: There is insufficient information to determine whether a discrepancy exists. This applies when the answers are too vague, incomplete, require additional context to assess their relationship, or directly fail to answer the question asked.
+2. CONTRADICTION: The answers provide directly opposing factual information — one explicitly denies or negates what the other asserts. This includes partial contradictions where the answers give different numbers, thresholds, dates, or categorical values for the same fact.
 
-4. NO_DISCREPANCY: The answers are fully consistent, presenting aligned or identical information without any conflict or variation in framing.
+3. NOT_ENOUGH_INFO: Insufficient information to determine the relationship. The answers are too vague, address different aspects of the question, or one fails to answer the question at all.
 
-Response Format:  
-- REASON: [Briefly explain why you selected this category]  
-- DISCREPANCY_TYPE: [Choose one of the five categories above]
+4. NO_DISCREPANCY: The answers are consistent, presenting aligned or complementary information.
 
-#### EXAMPLE ####
+## Key distinction
 
-QUESTION: Does the shot significantly increase the risk of blood clots? 
+- CONTRADICTION requires that the two claims cannot both be true in any single context (e.g., different numbers for the same measurement, opposite yes/no answers to the same factual question).
+- CULTURAL_DISCREPANCY applies when both can be true in different cultural or regional contexts.
+- If one answer addresses a different aspect or method than the other without directly conflicting, classify as NOT_ENOUGH_INFO.
+
+## Response format
+
+Think step-by-step:
+1. What specific factual claim does each answer make?
+2. Do these claims directly conflict, or could they coexist?
+3. Classify accordingly.
+
+- REASON: [Your step-by-step reasoning]
+- DISCREPANCY_TYPE: [Choose one of the categories listed above]
+
+## Examples
+
+QUESTION: Does the shot significantly increase the risk of blood clots?
 ANSWER_1: YES. The shot increases the risk of blood clots, making users three times more likely to experience them compared to those using a hormonal IUD.
 ANSWER_2: NO. The shot does not contain estrogen and is considered safe for use immediately after childbirth, meaning it does not significantly raise the risk of blood clots.
-REASON: The answers provide directly opposing factual information on the risk of blood clots associated with the shot.
+REASON: ANSWER_1 asserts the shot increases blood clot risk by 3x. ANSWER_2 directly denies this. Both cannot be true for the same medical product.
 DISCREPANCY_TYPE: CONTRADICTION
 
 QUESTION: Is the primary living space typically located above ground level?
 ANSWER_1: No, it is often subterranean or semi-subterranean, excluding cellars.
 ANSWER_2: Yes, it is typically at ground level.
-REASON: The answers reflect differences in cultural practices and norms regarding the location of primary living spaces, rather than factual contradictions.
+REASON: ANSWER_1 describes a cultural practice where living spaces are below ground. ANSWER_2 describes above-ground living. Both can be valid in different regional building traditions.
 DISCREPANCY_TYPE: CULTURAL_DISCREPANCY
 
-QUESTION: Does the rectangular fold method involve folding the diaper into a rectangle?	
-ANSWER_1: YES, the rectangular fold method involves folding the diaper into a rectangle. The passage describes this process in detail, mentioning to fold the diaper into a rectangle and potentially making an extra fold for added coverage in certain areas.	
-ANSWER_2: NO, the triangular fold method involves folding the diaper into a triangle, not a rectangle.	
-REASON: The two answers refer to different diaper-folding techniques (rectangular vs. triangular) rather than directly contradicting each other. ANSWER_2 does not dispute the first answer's claim about the rectangular fold but instead describes a separate method.
+QUESTION: Does the rectangular fold method involve folding the diaper into a rectangle?
+ANSWER_1: YES, the rectangular fold method involves folding the diaper into a rectangle.
+ANSWER_2: NO, the triangular fold method involves folding the diaper into a triangle, not a rectangle.
+REASON: ANSWER_2 describes a different folding technique (triangular) rather than the one asked about (rectangular). It does not dispute ANSWER_1's claim about the rectangular method.
 DISCREPANCY_TYPE: NOT_ENOUGH_INFO
-
 
 QUESTION: Is global warming driving polar bears toward extinction?
 ANSWER_1: YES, global warming is driving polar bears toward extinction.
 ANSWER_2: Yes, environmental changes due to global warming are causing the extinction or relocation of many species, including those in the Arctic where polar bears live.
-REASON: Both answers agree that global warming is negatively impacting polar bears, contributing to their potential extinction. ANSWER_2 adds more context about broader environmental effects but does not contradict or conflict with ANSWER_1. They are consistent and complementary in their information.
+REASON: Both answers agree that global warming negatively impacts polar bears. ANSWER_2 adds broader context but does not conflict with ANSWER_1.
 DISCREPANCY_TYPE: NO_DISCREPANCY
 
 
-#### YOUR TASK ####  
+#### YOUR TASK ####
 
-QUESTION: {question}  
-ANSWER_1: {answer_1}  
-ANSWER_2: {answer_2}  
+QUESTION: {question}
+ANSWER_1: {answer_1}
+ANSWER_2: {answer_2}
 
-Before answering, consider whether the answers could be true in different cultural contexts.
+Think step-by-step: what specific claims do the answers make, and do they conflict?

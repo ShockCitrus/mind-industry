@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 import pandas as pd
-from mind.utils.utils import init_logger
+from mind.utils.utils import init_logger, get_optimization_settings
 from tqdm import tqdm
 
 
@@ -13,6 +13,7 @@ class Segmenter():
         logger=None
     ):
         self._logger = logger if logger else init_logger(config_path, __name__)
+        self._opt_settings = get_optimization_settings(str(config_path), self._logger)
 
     def segment(
         self,
@@ -24,51 +25,78 @@ class Segmenter():
         sep: str = "\n"
     ):
         """
-        Segments each entry in the specified text column into paragraphs, filters out short/empty ones, and saves the resulting dataframe to the specified path.
+        Segments each entry in the specified text column into paragraphs using
+        vectorized pandas operations for maximum performance.
 
         Parameters:
         -----------
-        text_col: str 
+        path_df : Path
+            Path to input Parquet file.
+        path_save : Path
+            Path to save segmented output.
+        text_col : str 
             Name of the column to segment.
-        min_length: int
+        id_col : str
+            Name of the ID column to use for generating paragraph IDs.
+        min_length : int
             Minimum length for a paragraph to be kept.
-        sep: str
+        sep : str
             Separator for splitting paragraphs (default: newline).
         """
+        import time
 
         self._logger.info(f"Loading dataframe from {path_df}")
         df = pd.read_parquet(path_df)
-        self._logger.info(
-            f"Loaded {len(df)} rows. Starting segmentation on column '{text_col}'...")
+        original_count = len(df)
+        self._logger.info(f"Loaded {original_count} rows. Starting vectorized segmentation...")
 
-        # we preserve the original document metadata columns for each new paragraph
-        orig_cols = list(df.columns)
-        new_rows = []
-
-        import time
-        self._logger.info(
-            f"Segmenting paragraphs using separator '{sep}' and minimum length {min_length}...")
         start_time = time.time()
-        for _, row in tqdm(df.iterrows(), total=len(df), desc="Segmenting paragraphs"):
-            full_doc_text = str(row[text_col])
-            paragraphs = [p for p in full_doc_text.split(
-                sep) if p and len(p) > min_length]
-            for idx, p in enumerate(paragraphs):
-                entry = {col: row.get(col, None) for col in orig_cols}
-                entry[text_col] = p  # replace with paragraph
-                entry['full_doc'] = full_doc_text  # add full document text
-                entry['id'] = None  # will set below
-                entry['id_preproc'] = f"{row.get(id_col, '')}_{idx}"
-                new_rows.append(entry)
-        elapsed = time.time() - start_time
-        self._logger.info(f"Segmentation took {elapsed:.2f} seconds.")
 
-        seg_df = pd.DataFrame(new_rows)
-        seg_df['id'] = range(len(seg_df))
+        # Preserve original document text and ID before transformation
+        df["full_doc"] = df[text_col].astype(str)
+        df["_orig_id"] = df[id_col].astype(str)
+
+        # Store original column list (excluding our new columns)
+        orig_cols = [c for c in df.columns if c not in ["full_doc", "_orig_id"]]
+
+        # VECTORIZED: Split text into list of paragraphs
+        df["_paragraphs"] = df[text_col].str.split(sep)
+
+        # VECTORIZED: Explode to one row per paragraph
+        df = df.explode("_paragraphs", ignore_index=True)
+
+        # VECTORIZED: Filter empty/short paragraphs
+        df = df[
+            (df["_paragraphs"].notna()) & 
+            (df["_paragraphs"].str.strip() != "") &
+            (df["_paragraphs"].str.len() > min_length)
+        ].copy()
+
+        # Replace text column with paragraph content
+        df[text_col] = df["_paragraphs"]
+
+        # Generate sequential paragraph index per original document
+        df["_para_idx"] = df.groupby("_orig_id").cumcount().astype(str)
+        df["id_preproc"] = df["_orig_id"] + "_" + df["_para_idx"]
+
+        # Clean up temporary columns
+        df = df.drop(columns=["_paragraphs", "_orig_id", "_para_idx"])
+
+        # Reset global ID
+        df["id"] = range(len(df))
+
+        elapsed = time.time() - start_time
         self._logger.info(
-            f"Segmented into {len(seg_df)} paragraphs. Saving to {path_save}")
-        seg_df.to_parquet(path_save, compression="gzip")
-        self._logger.info(f"Saved segmented dataframe to {path_save}")
+            f"Vectorized segmentation took {elapsed:.2f}s "
+            f"({original_count/elapsed:.1f} docs/sec)"
+        )
+        self._logger.info(f"Segmented into {len(df)} paragraphs. Saving to {path_save}")
+
+        # Use optimized compression from config
+        compression = self._opt_settings.get("parquet_compression", "zstd")
+        df.to_parquet(path_save, compression=compression)
+        self._logger.info(f"Saved segmented dataframe to {path_save} (compression: {compression})")
+
         return path_save
 
 

@@ -105,79 +105,135 @@ def preprocess_stage1(task_id, task_name, email, dataset, segmenter_data, transl
         print(f"ERROR: Task {task_id} not found or was deleted")
         return
 
-    print(f"Starting task: {task_name}")
-
-    TOTAL_STEPS = 4
+    print(f"[{task_name}] Task started.")
+    print(f"[{task_name}] dataset={dataset!r}")
+    print(f"[{task_name}] segmenter_data={segmenter_data!r}")
+    print(f"[{task_name}] translator_data={translator_data!r}")
+    print(f"[{task_name}] preparer_data={preparer_data!r}")
 
     try:
-        for step in range(1, TOTAL_STEPS + 1):
-            percent = int((step / (TOTAL_STEPS + 1)) * 100)
-            task_state['percent'] = percent
+        # ── Step 1: Segmenter ──
+        task_state['percent'] = 20
+        step_name = "Segmenting"
+        task_state['message'] = f"Step 1: {step_name} {dataset}..."
+        print(f"[{task_name}] → Sending segmenter request for dataset={dataset!r}, output={segmenter_data.get('output')!r}")
+        response = requests.post(
+            f"{MIND_WORKER_URL}/segmenter",
+            json={"email": email, "dataset": dataset, "segmenter_data": segmenter_data}
+        )
+        response.raise_for_status()
+        seg_data = response.json()
+        print(f"[{task_name}] Segmenter response: {seg_data}")
+        step_id = seg_data.get("step_id")
+        output_dir = seg_data.get("output_dir", "")
+        # segmenter_output_dir is the actual 1_RawData path where the .monolingual marker is written
+        segmenter_output_dir = seg_data.get("segmenter_output_dir", "")
+        print(f"[{task_name}] Segmenter step_id={step_id!r}, output_dir={output_dir!r}, segmenter_output_dir={segmenter_output_dir!r}")
+        if step_id:
+            wait_for_step_completion(step_id, step_name)
 
-            if step == 1:
-                step_name = "Segmenting"
-                task_state['message'] = f"Step {step}/{TOTAL_STEPS}: {step_name} {dataset}..."
-                response = requests.post(
-                    f"{MIND_WORKER_URL}/segmenter",
-                    json={"email": email, "dataset": dataset, "segmenter_data": segmenter_data}
-                )
-                response.raise_for_status()
-                data = response.json()
-                print(data.get("message"))
-                step_id = data.get("step_id")
-                if step_id:
-                    wait_for_step_completion(step_id, step_name)
+        # ── Check if monolingual ──
+        mono_marker = f"{segmenter_output_dir}/.monolingual"
+        is_monolingual = False
+        mono_lang = None
+        print(f"[{task_name}] Checking for monolingual marker at: {mono_marker!r}")
+        try:
+            check_resp = requests.get(f"{MIND_WORKER_URL}/file_exists", params={"path": mono_marker})
+            check_data = check_resp.json()
+            print(f"[{task_name}] file_exists response: {check_data}")
+            if check_resp.status_code == 200 and check_data.get("exists"):
+                is_monolingual = True
+                mono_lang = check_data.get("content", "").strip().upper()
+                print(f"[{task_name}] Monolingual dataset detected (lang={mono_lang!r}). Translation will be skipped.")
+            else:
+                print(f"[{task_name}] No monolingual marker found — bilingual path will be used.")
+        except Exception as e:
+            print(f"[{task_name}] WARNING: Could not check monolingual marker: {e}. Defaulting to bilingual.")
 
-            elif step == 2:
-                step_name = f"Translating ({translator_data['src_lang']} → {translator_data['tgt_lang']})"
-                task_state['message'] = f"Step {step}/{TOTAL_STEPS}: {step_name} {dataset}..."
-                response = requests.post(
-                    f"{MIND_WORKER_URL}/translator",
-                    json={"email": email, "dataset": dataset, "translator_data": translator_data}
+        if is_monolingual:
+            # ── Monolingual path: skip translation, go directly to preparer ──
+            task_state['percent'] = 60
+            task_state['message'] = f"Step 2/2: Data-Preparing (monolingual) {dataset}..."
+            preparer_data['is_monolingual'] = True
+            preparer_data['src_lang'] = mono_lang.lower()
+            print(f"[{task_name}] → Sending preparer request (monolingual). preparer_data={preparer_data!r}")
+            response = requests.post(
+                f"{MIND_WORKER_URL}/preparer",
+                json={"email": email, "dataset": dataset, "preparer_data": preparer_data}
+            )
+            response.raise_for_status()
+            data = response.json()
+            print(f"[{task_name}] Preparer (monolingual) response: {data}")
+            step_id = data.get("step_id")
+            if step_id:
+                wait_for_step_completion(step_id, "Data-Preparing (monolingual)")
+        else:
+            # ── Bilingual path: translate both directions, then prepare ──
+            if translator_data is None:
+                raise ValueError(
+                    "translator_data is None but dataset is bilingual. "
+                    "Please provide source and target language details."
                 )
-                response.raise_for_status()
-                data = response.json()
-                print(data.get("message"))
-                step_id = data.get("step_id")
-                if step_id:
-                    wait_for_step_completion(step_id, step_name)
 
-            elif step == 3:
-                step_name = f"Translating ({translator_data['tgt_lang']} → {translator_data['src_lang']})"
-                tgt_lang = translator_data['tgt_lang']
-                translator_data['tgt_lang'] = translator_data['src_lang']
-                translator_data['src_lang'] = tgt_lang
-                task_state['message'] = f"Step {step}/{TOTAL_STEPS}: {step_name} {dataset}..."
-                response = requests.post(
-                    f"{MIND_WORKER_URL}/translator",
-                    json={"email": email, "dataset": dataset, "translator_data": translator_data}
-                )
-                response.raise_for_status()
-                data = response.json()
-                print(data.get("message"))
-                step_id = data.get("step_id")
-                if step_id:
-                    wait_for_step_completion(step_id, step_name)
+            # Step 2: Translate src → tgt
+            task_state['percent'] = 35
+            step_name = f"Translating ({translator_data['src_lang']} → {translator_data['tgt_lang']})"
+            task_state['message'] = f"Step 2/4: {step_name} {dataset}..."
+            print(f"[{task_name}] → Sending translator request (src→tgt). translator_data={translator_data!r}")
+            response = requests.post(
+                f"{MIND_WORKER_URL}/translator",
+                json={"email": email, "dataset": dataset, "translator_data": translator_data}
+            )
+            response.raise_for_status()
+            data = response.json()
+            print(f"[{task_name}] Translator (→tgt) response: {data}")
+            step_id = data.get("step_id")
+            if step_id:
+                wait_for_step_completion(step_id, step_name)
 
-            elif step == 4:
-                step_name = "Data-Preparing"
-                task_state['message'] = f"Step {step}/{TOTAL_STEPS}: {step_name} {dataset}..."
-                response = requests.post(
-                    f"{MIND_WORKER_URL}/preparer",
-                    json={"email": email, "dataset": dataset, "preparer_data": preparer_data}
-                )
-                response.raise_for_status()
-                data = response.json()
-                print(data.get("message"))
-                step_id = data.get("step_id")
-                if step_id:
-                    wait_for_step_completion(step_id, step_name)
+            # Step 3: Translate tgt → src
+            task_state['percent'] = 55
+            step_name = f"Translating ({translator_data['tgt_lang']} → {translator_data['src_lang']})"
+            tgt_lang = translator_data['tgt_lang']
+            translator_data['tgt_lang'] = translator_data['src_lang']
+            translator_data['src_lang'] = tgt_lang
+            task_state['message'] = f"Step 3/4: {step_name} {dataset}..."
+            print(f"[{task_name}] → Sending translator request (tgt→src). translator_data={translator_data!r}")
+            response = requests.post(
+                f"{MIND_WORKER_URL}/translator",
+                json={"email": email, "dataset": dataset, "translator_data": translator_data}
+            )
+            response.raise_for_status()
+            data = response.json()
+            print(f"[{task_name}] Translator (→src) response: {data}")
+            step_id = data.get("step_id")
+            if step_id:
+                wait_for_step_completion(step_id, step_name)
+
+            # Step 4: Data Preparer
+            task_state['percent'] = 75
+            step_name = "Data-Preparing"
+            task_state['message'] = f"Step 4/4: {step_name} {dataset}..."
+            print(f"[{task_name}] → Sending preparer request (bilingual). preparer_data={preparer_data!r}")
+            response = requests.post(
+                f"{MIND_WORKER_URL}/preparer",
+                json={"email": email, "dataset": dataset, "preparer_data": preparer_data}
+            )
+            response.raise_for_status()
+            data = response.json()
+            print(f"[{task_name}] Preparer (bilingual) response: {data}")
+            step_id = data.get("step_id")
+            if step_id:
+                wait_for_step_completion(step_id, step_name)
 
         task_state['message'] = f"{task_name} completed! Results saved."
         task_state['percent'] = 100
-        print(f"Completed task: {task_name}")
+        print(f"[{task_name}] Task completed successfully.")
 
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[{task_name}] FATAL ERROR: {e}\n{tb}")
         task_state['message'] = f"FATAL ERROR in {task_name}: {e}"
         task_state['percent'] = -1
 
@@ -185,7 +241,8 @@ def preprocess_stage1(task_id, task_name, email, dataset, segmenter_data, transl
         time.sleep(5)
         with tasks_lock:
             RUNNING_TASKS[email] = [t for t in RUNNING_TASKS[email] if t['id'] != task_id]
-        print(f"Task: {task_name} removed from the active tasks")
+        print(f"[{task_name}] Task removed from active tasks.")
+
 
 
 @preprocess.route('/preprocess/Stage1', methods=['POST'])
@@ -325,7 +382,7 @@ def start_topicModelling():
     dataset = data.get('dataset')
     output = data.get('output')
     lang1 = data.get('lang1')
-    lang2 = data.get('lang2')
+    lang2 = data.get('lang2')  # None / empty string for monolingual
     k = data.get('k')
     labelTopic = data.get('labelTopic')
     user_id = session.get('user_id')

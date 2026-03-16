@@ -23,11 +23,36 @@ from utils import get_TM_detection, obtain_langs_TM, obtainTextColumn, process_m
 detection_bp = Blueprint("detection", __name__)
 MIND_FRONTEND_URL = os.getenv('MIND_FRONTEND_URL', 'http://frontend:5000')
 
-OLLAMA_SERVER = {
-    "kumo01": "http://kumo01.tsc.uc3m.es:11434",
-    "kumo02": "http://kumo02.tsc.uc3m.es:11434",
-    "yiyuan": "https://yiyuan.tsc.uc3m.es"
-}
+
+def _topics_to_path_slug(topics: str) -> str:
+    """Convert a comma-separated topics string to a filesystem-safe slug.
+
+    Examples
+    --------
+    '1,2,3,4,5'  -> '1_2_3_4_5'
+    '3'          -> '3'
+    '1, 2 , 3'   -> '1_2_3'
+    """
+    return re.sub(r'\s*,\s*', '_', str(topics).strip())
+
+# ---------------------------------------------------------------------------
+# LLM Server configuration — loaded from config file, NOT hardcoded.
+# To add or change servers, edit the 'llm.ollama.servers' section of
+# /src/config/config.yaml.
+# ---------------------------------------------------------------------------
+def _load_llm_config(config_path: str = "/src/config/config.yaml") -> dict:
+    """Load the full llm config block from the YAML config file."""
+    try:
+        with open(config_path) as f:
+            raw = yaml.safe_load(f)
+        return raw.get("llm", {})
+    except Exception as e:
+        print(f"[WARNING] Could not load LLM config from {config_path}: {e}")
+        return {}
+
+_llm_cfg = _load_llm_config()
+OLLAMA_SERVER: dict = _llm_cfg.get("ollama", {}).get("servers", {})
+GEMINI_MODELS: list = _llm_cfg.get("gemini", {}).get("available_models", [])
 ACTIVE_OLLAMA_SERVERS = []
 
 active_processes = {}
@@ -195,38 +220,45 @@ def getTopicKeys():
         print(str(e))
         return jsonify({"error": f"ERROR: {str(e)}"}), 500
     
+@detection_bp.route('/detection/servers', methods=['GET'])
+def getServers():
+    """Return the list of configured LLM server names.
+    
+    The frontend uses this to populate the server selector without any
+    hardcoded names.
+    """
+    try:
+        return jsonify({
+            "ollama_servers": list(OLLAMA_SERVER.keys()),
+            "gemini_models": GEMINI_MODELS,
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @detection_bp.route('/detection/models', methods=['GET'])
 def getModels():
-    """gemma3:4b"""
     try:
-        # models_detection = ["qwen2.5:72b", "llama3.2", "llama3.1:8b-instruct-q8_0", "qwen:32b", "llama3.3:70b", "qwen2.5:7b-instruct", "qwen3:32b", "llama3.3:70b-instruct-q5_K_M", "llama3:8b"]
-        models_detection = ["gemma3:4b",
-                            "mistral:7b",
-                            "mixtral:8x22b",
-                            "gemma2:9b",
-                            "llama3.1:8b",
-                            "llama4:16x17b",
-                            "qwen3:8b",
-                            "qwen3:32b",
-                            "falcon3:10b"
-                            ]
-        avaible_models = {}
-        for server in OLLAMA_SERVER.keys():
-            if server == "yiyuan":
-                response = requests.get(f"{OLLAMA_SERVER[server]}/v1/models", headers={'X-API-KEY': os.getenv('YIYUAN_API_KEY')})
-            else:
-                response = requests.get(f"{OLLAMA_SERVER[server]}/v1/models")
-            if response.status_code == 200:
-                data = response.json()
-                models_server = [m['id'] for m in data['data']]  
-                
-                avaible_models[server] = []
-                for model in models_detection:
-                    if model in models_server:
-                        avaible_models[server].append(model)
-        
-        return jsonify({"models": avaible_models}), 200
-    
+        # Ollama: probe each configured server for its loaded models
+        available_models = {}
+        for server_name, server_url in OLLAMA_SERVER.items():
+            try:
+                response = requests.get(f"{server_url}/v1/models", timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    server_models = [m['id'] for m in data['data']]
+                    available_models[server_name] = server_models
+                else:
+                    available_models[server_name] = []
+            except Exception:
+                available_models[server_name] = []
+
+        # Gemini: always available (API-key gated, not server-gated)
+        if GEMINI_MODELS:
+            available_models["gemini"] = GEMINI_MODELS
+
+        return jsonify({"models": available_models}), 200
+
     except Exception as e:
         print(str(e))
         return jsonify({"error": f"ERROR: {str(e)}"}), 500
@@ -247,10 +279,10 @@ def doc_representation():
         
         lang = obtain_langs_TM(pathTM)
         textCol = obtainTextColumn(email, pathCorpus.replace('/dataset', '').split('/')[-1])
+        is_monolingual = len(lang) == 1
 
         df = pd.read_parquet(pathCorpus, engine='pyarrow')
         df1 = df[df["lang"] == lang[0]].copy()
-        df2 = df[df["lang"] == lang[1]].copy()
 
         ids_1 = df1['doc_id'].astype(str).tolist()
         texts_1 = [
@@ -258,11 +290,15 @@ def doc_representation():
             for text in df1[textCol].astype(str)
         ]
 
-        ids_2 = df2['doc_id'].astype(str).tolist()
-        texts_2 = [
-            " ".join(text.split()[:80]) + "..." if len(text.split()) > 10 else text
-            for text in df2[textCol].astype(str)
-        ]
+        if not is_monolingual:
+            df2 = df[df["lang"] == lang[1]].copy()
+            ids_2 = df2['doc_id'].astype(str).tolist()
+            texts_2 = [
+                " ".join(text.split()[:80]) + "..." if len(text.split()) > 10 else text
+                for text in df2[textCol].astype(str)
+            ]
+        else:
+            ids_2, texts_2 = [], []
         
         topic_docs = defaultdict(list)
 
@@ -283,12 +319,17 @@ def doc_representation():
             with open(f'/data/{email}/3_TopicModel/{TM}/mallet_output/labels_{lang[0]}.txt', 'r', encoding='utf-8') as f:
                 labels1 = f.readlines()
 
-            with open(f'/data/{email}/3_TopicModel/{TM}/mallet_output/labels_{lang[1]}.txt', 'r', encoding='utf-8') as f:
-                labels2 = f.readlines()
+            if not is_monolingual:
+                with open(f'/data/{email}/3_TopicModel/{TM}/mallet_output/labels_{lang[1]}.txt', 'r', encoding='utf-8') as f:
+                    labels2 = f.readlines()
 
-            for k in range(len(topic_docs)):
-                for doc in range(len(topic_docs[k])):
-                    topic_docs[k][doc][2] += f' ({lang[0].upper()}: {labels1[k].strip()} || {lang[1].upper()}: {labels2[k].strip()})'
+                for k in range(len(topic_docs)):
+                    for doc in range(len(topic_docs[k])):
+                        topic_docs[k][doc][2] += f' ({lang[0].upper()}: {labels1[k].strip()} || {lang[1].upper()}: {labels2[k].strip()})'
+            else:
+                for k in range(len(topic_docs)):
+                    for doc in range(len(topic_docs[k])):
+                        topic_docs[k][doc][2] += f' ({lang[0].upper()}: {labels1[k].strip()})'
 
         docs_data_1 = [
             {
@@ -306,27 +347,31 @@ def doc_representation():
                 except:
                     continue
 
-        docs_data_2 = [
-            {
-                "id": ids_2[i],
-                "text": texts_2[i],
-                "topics": {}
-            }
-            for i in range(len(ids_2))
-        ]
+        if not is_monolingual:
+            docs_data_2 = [
+                {
+                    "id": ids_2[i],
+                    "text": texts_2[i],
+                    "topics": {}
+                }
+                for i in range(len(ids_2))
+            ]
 
-        for k, doc_list in topic_docs.items():
-            for doc_id, prop, topic_name in doc_list:
-                try:
-                    docs_data_2[doc_id]["topics"][topic_name] = prop
-                except:
-                    continue
+            for k, doc_list in topic_docs.items():
+                for doc_id, prop, topic_name in doc_list:
+                    try:
+                        docs_data_2[doc_id]["topics"][topic_name] = prop
+                    except:
+                        continue
+        else:
+            docs_data_2 = []
 
         return jsonify({
             "docs_data_1": docs_data_1,
             "lang_1": lang[0],
             "docs_data_2": docs_data_2,
-            "lang_2": lang[1]
+            "lang_2": lang[1] if not is_monolingual else "",
+            "is_monolingual": is_monolingual
         }), 200
     
     except Exception as e:
@@ -339,14 +384,15 @@ def pipeline_status():
         data = request.get_json()
         global lock, active_processes
         with lock:
+            _slug = _topics_to_path_slug(data['topics'])
             if data['email'] in active_processes:
                 if active_processes[data['email']]['process'].is_alive():
                     return jsonify({"status": "running"}), 200
-                elif os.path.exists(f'/data/{data['email']}/4_Detection/{data['TM']}_contradiction/{data['topics']}/mind_results.parquet'):
+                elif os.path.exists(f'/data/{data["email"]}/4_Detection/{data["TM"]}_contradiction/{_slug}/mind_results.parquet'):
                     return jsonify({"status": "finished"}), 200
                 return jsonify({"status": "error"}), 500
             else:
-                if os.path.exists(f'/data/{data['email']}/4_Detection/{data['TM']}_contradiction/{data['topics']}/mind_results.parquet'):
+                if os.path.exists(f'/data/{data["email"]}/4_Detection/{data["TM"]}_contradiction/{_slug}/mind_results.parquet'):
                     return jsonify({"status": "finished"}), 200
                 return jsonify({"status": "error"}), 500
             
@@ -405,7 +451,8 @@ def analyse_contradiction():
         config = data.get("config")
 
         # First check if was analyse before
-        path_results = f'/data/{email}/4_Detection/{TM}_contradiction/{topics}/'
+        topics_slug = _topics_to_path_slug(topics)
+        path_results = f'/data/{email}/4_Detection/{TM}_contradiction/{topics_slug}/'
         if os.path.exists(path_results):
             print('Results were done before.')
             return jsonify({"message": "Pipeline done correctly"}), 200
@@ -420,61 +467,104 @@ def analyse_contradiction():
         
         lang = obtain_langs_TM(pathTM)
         textCol = obtainTextColumn(email, pathCorpus.replace('/dataset', '').split('/')[-1])
+        is_monolingual = len(lang) == 1
 
-        if config['llm_type'] == 'GPT':
+        llm_type = config.get('llm_type', 'default')
+
+        if llm_type == 'GPT':
+            llm_model = config.get('llm')
             llm_server = ''
             with open(f'/data/{email}/.env', 'w') as f:
-                f.write(f'OPEN_API_KEY={config['gpt_api']}')
-        
-        else:
-            llm_server = OLLAMA_SERVER[config['ollama_server']]
+                f.write(f'OPEN_API_KEY={config["gpt_api"]}')
+
+        elif llm_type == 'gemini' or llm_type == 'default':
+            # Use the llm.default block from config.yaml — no model or server needed here.
+            llm_model = None
+            llm_server = None
+
+        else:  # Ollama
+            server_name = config.get('ollama_server')
+            if not server_name or server_name not in OLLAMA_SERVER:
+                return jsonify({"error": f"Unknown Ollama server '{server_name}'. Check llm.ollama.servers in config.yaml."}), 400
+            llm_model = config.get('llm')
+            llm_server = OLLAMA_SERVER[server_name]
             global ACTIVE_OLLAMA_SERVERS
-            if config['llm'] in ACTIVE_OLLAMA_SERVERS:
-                return jsonify({"error": f"{config['llm']} is in use. Please, choose another ollama LLM."}), 500
-            else: ACTIVE_OLLAMA_SERVERS.append(config['llm'])
+            if llm_model in ACTIVE_OLLAMA_SERVERS:
+                return jsonify({"error": f"{llm_model} is in use. Please, choose another ollama LLM."}), 500
+            else:
+                ACTIVE_OLLAMA_SERVERS.append(llm_model)
         
         # =========================
         # =      CONFIG PART      =
         # =========================
 
-        source_corpus = {
-            "corpus_path": pathCorpus,
-            "thetas_path": f'{pathTM}/mallet_output/thetas_{lang[0]}.npz',
-            "id_col": 'doc_id',
-            "passage_col": textCol,
-            "full_doc_col": 'full_doc',
-            "language_filter": lang[0],
-            "filter_ids": None,
-            "load_thetas": True,
-            "method": config['method'],
-        }
+        if is_monolingual:
+            # Monolingual: source and target are the same corpus & language
+            source_corpus = {
+                "corpus_path": pathCorpus,
+                "thetas_path": f'{pathTM}/mallet_output/thetas_{lang[0]}.npz',
+                "id_col": 'doc_id',
+                "passage_col": textCol,
+                "full_doc_col": 'full_doc',
+                "language_filter": lang[0],
+                "filter_ids": None,
+                "load_thetas": True,
+                "method": config['method'],
+            }
 
-        target_corpus = {
-            "corpus_path": pathCorpus,
-            "thetas_path": f'{pathTM}/mallet_output/thetas_{lang[1]}.npz',
-            "id_col": 'doc_id',
-            "passage_col": textCol,
-            "full_doc_col": 'full_doc',
-            "language_filter": lang[1],
-            "filter_ids": None,
-            "load_thetas": True,
-            "method": config['method'],
-            'index_path': f'/data/{email}/3_TopicModel/{TM}/'
-        }
+            target_corpus = {
+                "corpus_path": pathCorpus,
+                "thetas_path": f'{pathTM}/mallet_output/thetas_{lang[0]}.npz',
+                "id_col": 'doc_id',
+                "passage_col": textCol,
+                "full_doc_col": 'full_doc',
+                "language_filter": lang[0],
+                "filter_ids": None,
+                "load_thetas": True,
+                "method": config['method'],
+                'index_path': f'/data/{email}/3_TopicModel/{TM}/'
+            }
+        else:
+            source_corpus = {
+                "corpus_path": pathCorpus,
+                "thetas_path": f'{pathTM}/mallet_output/thetas_{lang[0]}.npz',
+                "id_col": 'doc_id',
+                "passage_col": textCol,
+                "full_doc_col": 'full_doc',
+                "language_filter": lang[0],
+                "filter_ids": None,
+                "load_thetas": True,
+                "method": config['method'],
+            }
+
+            target_corpus = {
+                "corpus_path": pathCorpus,
+                "thetas_path": f'{pathTM}/mallet_output/thetas_{lang[1]}.npz',
+                "id_col": 'doc_id',
+                "passage_col": textCol,
+                "full_doc_col": 'full_doc',
+                "language_filter": lang[1],
+                "filter_ids": None,
+                "load_thetas": True,
+                "method": config['method'],
+                'index_path': f'/data/{email}/3_TopicModel/{TM}/'
+            }
 
         cfg = {
-            "llm_model": config['llm'],
+            "llm_model": llm_model,   # None → MIND uses Prompter.from_config()
             "llm_server": llm_server,
             "source_corpus": source_corpus,
             "target_corpus": target_corpus,
             "retrieval_method": config['method'],
             "config_path": '/src/config/config.yaml',
-            "env_path": f'/data/{email}/.env' if config["llm_type"] == 'GPT' else None
+            "env_path": f'/data/{email}/.env' if llm_type == 'GPT' else None,
+            "monolingual": is_monolingual,
+            "selected_categories": config.get('selected_categories'),
         }
 
         run_kwargs = {
             "topics": [x - 1 for x in comma_separated_ints(topics)],
-            "sample_size": int(sample_size),
+            "sample_size": int(sample_size) if sample_size is not None else None,
             "path_save": path_results
         }
 
@@ -526,7 +616,8 @@ def get_results_mind():
         start = int(data.get("start", 0))
         end = start + ROWS_PER_PAGE
 
-        df = pd.read_parquet(f'/data/{email}/4_Detection/{TM}_contradiction/{topics}/mind_results.parquet', engine='pyarrow')
+        topics_slug = _topics_to_path_slug(topics)
+        df = pd.read_parquet(f'/data/{email}/4_Detection/{TM}_contradiction/{topics_slug}/mind_results.parquet', engine='pyarrow')
         df_rows = df.iloc[start:end]
         result_mind = df_rows.to_dict(orient='records')
         result_columns = df.columns.tolist()
@@ -539,12 +630,28 @@ def get_results_mind():
             for i in range(0, len(df), ROWS_PER_PAGE)
         ]
 
+        def _is_valid_label(lbl):
+            """Only allow SCREAMING_SNAKE_CASE labels up to 40 chars."""
+            import re as _re
+            return (
+                isinstance(lbl, str)
+                and len(lbl) <= 40
+                and bool(_re.match(r'^[A-Z][A-Z0-9_]*$', lbl))
+                and lbl != 'PARSE_ERROR'
+            )
+
+        raw_labels = df['label'].dropna().unique().tolist()
+        if 'final_label' in df.columns:
+            raw_labels = list(set(raw_labels + df['final_label'].dropna().unique().tolist()))
+        unique_labels = [l for l in raw_labels if _is_valid_label(l)]
+
         return jsonify({"message": f"Results from MIND obtained correctly",
                         "result_mind": result_mind,
                         "result_columns": result_columns,
                         "columns_json": columns_json,
                         "non_orderable_indices": non_orderable_indices,
-                        "ranges": pagination_ranges}), 200
+                        "ranges": pagination_ranges,
+                        "unique_labels": unique_labels}), 200
 
     except Exception as e:
         print(e)
@@ -580,11 +687,12 @@ def update_result_mind():
 
         df_xlsx.columns = keys
 
-        df = pd.read_parquet(f'/data/{email}/4_Detection/{TM}_contradiction/{topics}/mind_results.parquet', engine='pyarrow')
+        topics_slug = _topics_to_path_slug(topics)
+        df = pd.read_parquet(f'/data/{email}/4_Detection/{TM}_contradiction/{topics_slug}/mind_results.parquet', engine='pyarrow')
         df = df.astype(str)
         df_xlsx = df_xlsx.astype(str)
         df.iloc[start:end, :] = df_xlsx.values
-        df.to_parquet(f'/data/{email}/4_Detection/{TM}_contradiction/{topics}/mind_results.parquet', engine='pyarrow')
+        df.to_parquet(f'/data/{email}/4_Detection/{TM}_contradiction/{topics_slug}/mind_results.parquet', engine='pyarrow')
 
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:

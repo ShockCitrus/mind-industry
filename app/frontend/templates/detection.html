@@ -1,134 +1,149 @@
 {% extends "base.html" %}
 {% block title %}Detection{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mt-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/"><i class="ph ph-house me-1"></i>Home</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Detection</li>
+    </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/detection.css') }}">
+
 
 {% if status in ['idle', 'initializing'] %}
-    {% if dataset_detection %}
-    <h1>MIND Cultural discrepancy detection</h1>
-    {% elif topic_keys %}
-    <link rel="stylesheet"
-      href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
+{% if dataset_detection %}
+<h1>MIND Cultural discrepancy detection</h1>
+{% elif topic_keys %}
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="d-flex align-items-center">
-            <h3 class="mb-0 mr-2" id="TopicModel-h3" TM-name="{{ topic_keys['topics'][0]['TM_name'] }}">
-                Select topics from the Topic Model "{{ topic_keys["topics"][0]["TM_name"] if topic_keys["topics"] else '' }}"
-            </h3>
 
-            <!-- Botón Info -->
-            <button type="button"
-                    class="btn btn-sm btn-outline-info"
-                    style="border-radius: 20px;"
-                    data-toggle="modal"
-                    data-target="#infoModal"
-                    title="Information">
-                <i class="fas fa-info-circle"></i>
-            </button>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center">
+        <h3 class="mb-0 me-2" id="TopicModel-h3" TM-name="{{ topic_keys['topics'][0]['TM_name'] }}">
+            Select topics from the Topic Model "{{ topic_keys["topics"][0]["TM_name"] if topic_keys["topics"] else ''
+            }}"
+        </h3>
+
+        <!-- Botón Info -->
+        <button type="button" class="btn btn-sm btn-outline-info" style="border-radius: 20px;" data-bs-toggle="modal"
+            data-bs-target="#infoModal" title="Information">
+            <i class="ph ph-info"></i>
+        </button>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        <!-- Select / Clear All topics -->
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-select-all-topics" data-no-warning
+            title="Select all topics">Select All</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-clear-all-topics" data-no-warning
+            title="Clear selection" style="display:none;">Clear</button>
 
         <div class="btn-group" role="group" aria-label="Visual/Text toggle">
             <button type="button" class="btn btn-primary active" id="btn-visual" data-no-warning>Visual</button>
             <button type="button" class="btn btn-outline-primary" id="btn-text" data-no-warning>Text</button>
             {% if docs_data_1 %}
-            <button type="button" class="btn btn-outline-primary" id="btn-docs1" data-no-warning>Docs {{ lang_1 }}</button>
+            <button type="button" class="btn btn-outline-primary" id="btn-docs1" data-no-warning>Docs {{ lang_1
+                }}</button>
             {% endif %}
             {% if docs_data_2 %}
-            <button type="button" class="btn btn-outline-primary" id="btn-docs2" data-no-warning>Docs {{ lang_2 }}</button>
+            <button type="button" class="btn btn-outline-primary" id="btn-docs2" data-no-warning>Docs {{ lang_2
+                }}</button>
             {% endif %}
         </div>
     </div>
+</div>
 
-    <div class="modal fade" id="infoModal" tabindex="-1" role="dialog" aria-labelledby="infoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
+<div class="modal fade" id="infoModal" tabindex="-1" role="dialog" aria-labelledby="infoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
 
-                <div class="modal-header">
-                    <h5 class="modal-title" id="infoModalLabel">Info</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-
-                <div class="modal-body">
-                    <h6><strong>Visual / Text / Docs</strong></h6>
-                    <p>
-                        These modes control how the topics of the Topic Model are displayed and selected:
-                    </p>
-                    <ul>
-                        <li>
-                            <strong>Visual:</strong> Displays a graphical view where each topic is represented by a circle.
-                            Topics can be selected directly from the graph to analyze discrepancies.
-                        </li>
-                        <li>
-                            <strong>Text:</strong> Shows a list of topics along with their keywords for each language.
-                            Topics are selected from the list to analyze discrepancies.
-                        </li>
-                        <li>
-                            <strong>Docs:</strong> Displays a list of documents from the Topic Model.
-                            Each document includes a graph showing the proportion of topics within that document.
-                        </li>
-                    </ul>
-
-                    <hr>
-
-                    <h6><strong>Config Pipeline MIND</strong></h6>
-                    <p>
-                        Advanced configuration options to select the type of LLM to be used and the method
-                        for analyzing topic discrepancies.
-                    </p>
-
-                    <hr>
-
-                    <h6><strong>Analyze Discrepancies</strong></h6>
-                    <p>
-                        Analyzes discrepancies between the selected topics (from Visual or Text mode,
-                        depending on the active view) using a defined sample size.
-                    </p>
-                    <p class="text-danger">
-                        <strong>Important:</strong> Once the analysis starts, it is not possible to leave the page.
-                        Leaving the page will cancel the ongoing process.
-                    </p>
-
-                    <hr>
-
-                    <h6><strong>Check Status</strong></h6>
-                    <p>
-                        Displays the current status of the discrepancy analysis process in a terminal-like view
-                        once the analysis has started.
-                    </p>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                </div>
-
+            <div class="modal-header">
+                <h5 class="modal-title" id="infoModalLabel">Info</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+
+            <div class="modal-body">
+                <h6><strong>Visual / Text / Docs</strong></h6>
+                <p>
+                    These modes control how the topics of the Topic Model are displayed and selected:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Visual:</strong> Displays a graphical view where each topic is represented by a circle.
+                        Topics can be selected directly from the graph to analyze discrepancies.
+                    </li>
+                    <li>
+                        <strong>Text:</strong> Shows a list of topics along with their keywords for each language.
+                        Topics are selected from the list to analyze discrepancies.
+                    </li>
+                    <li>
+                        <strong>Docs:</strong> Displays a list of documents from the Topic Model.
+                        Each document includes a graph showing the proportion of topics within that document.
+                    </li>
+                </ul>
+
+                <hr>
+
+                <h6><strong>Config Pipeline MIND</strong></h6>
+                <p>
+                    Advanced configuration options to select the type of LLM to be used and the method
+                    for analyzing topic discrepancies.
+                </p>
+
+                <hr>
+
+                <h6><strong>Analyze Discrepancies</strong></h6>
+                <p>
+                    Analyzes discrepancies between the selected topics (from Visual or Text mode,
+                    depending on the active view) using a defined sample size.
+                </p>
+                <p class="text-danger">
+                    <strong>Important:</strong> Once the analysis starts, it is not possible to leave the page.
+                    Leaving the page will cancel the ongoing process.
+                </p>
+
+                <hr>
+
+                <h6><strong>Check Status</strong></h6>
+                <p>
+                    Displays the current status of the discrepancy analysis process in a terminal-like view
+                    once the analysis has started.
+                </p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+
         </div>
     </div>
-    {% endif %}
+</div>
+{% endif %}
 {% elif result_mind %}
-<div class="form-group row align-items-center mb-3">
+<div class="row align-items-center mb-3">
     <label class="col-auto"><strong>Records from:</strong></label>
     <div style="margin-left: 0px; margin-bottom: 5px;">
         <select id="rangeSelector" class="form-control">
             {% for start, end in ranges %}
-                <option value="{{ start }}">
-                    {{ start }} - {{ end - 1 }}
-                </option>
+            <option value="{{ start }}">
+                {{ start }} - {{ end - 1 }}
+            </option>
             {% endfor %}
         </select>
     </div>
 </div>
 {% endif %}
 
-<div class="jumbotron" id='jumbotron-detection' style="height: 60vh; overflow-y: auto; padding: 2rem;">
-    {% if status in ['idle', 'initializing'] %}        
-        {% if dataset_detection %}
-            <p class="lead">Start a session by selecting a dataset and a topic model associated:</p>
-            <div class="dataset-accordion">
-                <!-- Loading overlay -->
-                <div id="loadingOverlay" style="
+<div class="jumbotron" id='jumbotron-detection' style="height: 60vh; overflow: hidden; padding: 2rem;">
+    {% if status in ['idle', 'initializing'] %}
+    {% if dataset_detection %}
+    <p class="lead">Start a session by selecting a dataset and a topic model associated:</p>
+    <div class="dataset-accordion">
+        <!-- Loading overlay -->
+        <div id="loadingOverlay" style="
                     position: fixed;
                     top:0; left:0;
                     width:100%; height:100%;
@@ -140,762 +155,133 @@
                     font-size: 1.5rem;
                     color: #333;
                 ">
-                    <div>
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="sr-only">Loading...</span>
-                        </div>
-                        <div style="margin-top:10px;">Loading, please wait...</div>
-                    </div>
+            <div>
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
-
-                <script>
-                function showOverlay() {
-                    document.getElementById("loadingOverlay").style.display = "flex";
-                }
-
-                function hideOverlay() {
-                    document.getElementById("loadingOverlay").style.display = "none";
-                }
-                </script>
-
-                {% for dataset, topicmodel_list in dataset_detection.items() %}
-                <div class="dataset-group mb-3 border rounded-2 shadow-sm">
-
-                    <div class="dataset-header list-group-item hover-text-primary fw-bold bg-light" 
-                        role="button"
-                        aria-expanded="false"
-                        aria-controls="content-{{ loop.index }}"
-                        style="cursor:pointer; border:none;">
-                        Dataset: {{ dataset }}
-                        <span class="chev" aria-hidden="true" style="float:right; transition: transform .2s;">▸</span>
-                    </div>
-
-                    <ul id="content-{{ loop.index }}" class="list-group dataset-list" 
-                        style="display:none; background-color:#f8f9fa; margin:0; border-top:1px solid #ddd;">
-                        {% for tm in topicmodel_list %}
-                        <li class="list-group-item dataset-item hover-text-primary dataset-entry" 
-                            style="background-color:#f0f0f0; border:none; border-bottom:1px solid #e0e0e0;"
-                            dataset-tm='{ "dataset_name": "{{ dataset }}", "topic_model": "{{ tm }}" }'>
-                            <a class="dataset-link d-block px-2 py-1">
-                                Topic Model: {{ tm }}
-                            </a>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endfor %}
+                <div style="margin-top:10px;">Loading, please wait...</div>
             </div>
-
-        {% elif topic_keys %}
-        <script src="https://d3js.org/d3.v7.min.js"></script>
-
-        <!-- Option 1: Visual -->
-        <div id="topicVis" style="display: block; width: 100%; height: 100%; overflow: hidden;"></div>
-
-        <!-- Option 3: Docs lang1 -->
-        {% if docs_data_1 %}
-
-        <div id="topicDocs1" style="display: none; width: 100%; height: 100%; position: relative; overflow: none;">        
-            <div id="topicDocsContent1" 
-                style="overflow-y: auto; overflow-x: hidden; height: 100%; padding-bottom: 10px;">
-            </div>
-
-            <div id="paginationContainer1" 
-                class="d-flex justify-content-center align-items-center my-3"
-                style="
-                    position: sticky;
-                    bottom: -5vh;
-                    background: white;
-                    z-index: 10;
-                    padding: 10px 0;
-                    border-top: 1px solid #ccc;
-                ">
-            </div>
-        </div> 
-
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script>
-        const docsData1 = {{ docs_data_1 | tojson | safe }};
-        const accordionContainer1 = document.getElementById('topicDocsContent1');
-        const paginationContainer1 = document.getElementById('paginationContainer1');
-
-        const PAGE_SIZE = 100;
-        let currentPage = 0;
-        let activeCharts = {};
-        const MAX_BUTTONS = 5;
-
-        function generateColors(n) {
-            const colors = [];
-            for (let i = 0; i < n; i++) {
-                const hue = i * 360 / n;
-                colors.push(`hsl(${hue}, 70%, 50%)`);
-            }
-            return colors;
-        }
-
-        function clearPage1() {
-            Object.values(activeCharts).forEach(chart => chart.destroy());
-            activeCharts = {};
-            accordionContainer1.innerHTML = '';
-        }
-
-        function renderPage1(page) {
-            clearPage1();
-
-            const start = page * PAGE_SIZE;
-            const end = Math.min(start + PAGE_SIZE, docsData1.length);
-
-            for (let i = start; i < end; i++) {
-                const doc = docsData1[i];
-                const index = i;
-
-                const docGroup = document.createElement('div');
-                docGroup.className = 'doc-group mb-3 border rounded-2 shadow-sm';
-
-                const header = document.createElement('div');
-                header.className =
-                    'dataset-header doc-header list-group-item fw-bold bg-light d-flex justify-content-between';
-                header.style.cursor = 'pointer';
-                header.innerHTML = `
-                    <div style="margin-left:15px;">Document ${doc.id}</div>
-                    <span class="chev" style="transition: transform .2s;">▸</span>
-                `;
-
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'list-group doc-content';
-                contentDiv.style.display = 'none';
-                contentDiv.dataset.initialized = "false";
-
-                header.addEventListener('click', () => {
-                    const chev = header.querySelector('.chev');
-                    const open = contentDiv.style.display === 'block';
-
-                    if (!open) {
-                        contentDiv.style.display = 'block';
-                        chev.style.transform = 'rotate(90deg)';
-
-                        if (contentDiv.dataset.initialized === "false") {
-                            contentDiv.dataset.initialized = "true";
-
-                            const flexDiv = document.createElement('div');
-                            flexDiv.style.display = 'flex';
-                            flexDiv.style.maxHeight = '350px';
-
-                            const leftDiv = document.createElement('div');
-                            leftDiv.style.flex = '1';
-                            leftDiv.style.padding = '10px';
-                            leftDiv.style.borderRight = '1px solid #ccc';
-                            leftDiv.innerHTML = `<h5 style="text-align:center;">Text</h5><hr><p>${doc.text}</p>`;
-
-                            const rightDiv = document.createElement('div');
-                            rightDiv.style.flex = '1';
-                            rightDiv.style.padding = '10px';
-                            rightDiv.style.textAlign = 'center';
-                            rightDiv.innerHTML = `<h5>Chart</h5><hr>`;
-
-                            const canvas = document.createElement('canvas');
-                            canvas.style.width = '200px';
-                            canvas.style.height = '200px';
-                            canvas.style.display = 'block';
-                            canvas.style.margin = '0 auto';
-                            rightDiv.appendChild(canvas);
-
-                            flexDiv.appendChild(leftDiv);
-                            flexDiv.appendChild(rightDiv);
-                            contentDiv.appendChild(flexDiv);
-
-                            const topicKeys = Object.keys(doc.topics);
-                            const topicValues = Object.values(doc.topics);
-
-                            activeCharts[index] = new Chart(canvas, {
-                                type: 'pie',
-                                data: {
-                                    labels: topicKeys.map(t => "Topic " + t.replace('(', '\n').replace(')', '').replace('||', '\n')),
-                                    datasets: [{
-                                        data: topicValues,
-                                        backgroundColor: generateColors(topicKeys.length)
-                                    }]
-                                },
-                                options: {
-                                    responsive: false,
-                                    maintainAspectRatio: false,
-                                    plugins: { legend: { display: false } }
-                                }
-                            });
-                        }
-                    } else {
-                        contentDiv.style.display = 'none';
-                        chev.style.transform = 'rotate(0deg)';
-                    }
-                });
-
-                docGroup.appendChild(header);
-                docGroup.appendChild(contentDiv);
-                accordionContainer1.appendChild(docGroup);
-            }
-        }
-
-        function renderPagination1() {
-            paginationContainer1.innerHTML = '';
-            const totalPages = Math.ceil(docsData1.length / PAGE_SIZE);
-
-            const tempBtn = document.createElement('button');
-            tempBtn.style.visibility = 'hidden';
-            tempBtn.style.position = 'absolute';
-            tempBtn.innerText = totalPages;
-            document.body.appendChild(tempBtn);
-            let btnWidth = tempBtn.offsetWidth + 10;
-
-            const createButton = (text, pageNum, disabled = false, active = false) => {
-                const btn = document.createElement('button');
-                btn.style.width = btnWidth + 'px';
-                btn.innerText = text;
-                if (disabled) btn.disabled = true;
-                if (active) btn.classList.add('active');
-                btn.addEventListener('click', () => {
-                    currentPage = pageNum;
-                    renderPage1(currentPage);
-                    renderPagination1();
-                });
-                paginationContainer1.appendChild(btn);
-            };
-
-            btnWidth = 60
-            createButton('Prev', 30, currentPage === 0);
-
-            let startPage = Math.max(0, currentPage - Math.floor(MAX_BUTTONS / 2));
-            let endPage = startPage + MAX_BUTTONS - 1;
-            if (endPage >= totalPages) {
-                endPage = totalPages - 1;
-                startPage = Math.max(0, endPage - MAX_BUTTONS + 1);
-            }
-
-            btnWidth = tempBtn.offsetWidth + 10;
-            if (startPage > 0) {
-                createButton('1', 0);
-                if (startPage > 1) {
-                    const dots = document.createElement('span');
-                    dots.innerText = '...';
-                    paginationContainer1.appendChild(dots);
-                }
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                createButton((i + 1), i, false, i === currentPage);
-            }
-
-            if (endPage < totalPages - 1) {
-                if (endPage < totalPages - 2) {
-                    const dots = document.createElement('span');
-                    dots.innerText = '...';
-                    paginationContainer1.appendChild(dots);
-                }
-                createButton(totalPages, totalPages - 1);
-            }
-
-            btnWidth = 60;
-            createButton('Next', 30, currentPage === totalPages - 1);
-            document.body.removeChild(tempBtn);
-        }
-
-        renderPage1(currentPage);
-        renderPagination1();
-        </script>
-        {% endif %}
-
-        <!-- Option 4: Docs lang2 -->
-        {% if docs_data_2 %}
-
-        <div id="topicDocs2" style="display: none; width: 100%; height: 100%; position: relative; overflow: none;">        
-            <div id="topicDocsContent2" 
-                style="overflow-y: auto; overflow-x: hidden; height: 100%; padding-bottom: 10px;">
-            </div>
-
-            <div id="paginationContainer2" 
-                class="d-flex justify-content-center align-items-center my-3"
-                style="
-                    position: sticky;
-                    bottom: -5vh;
-                    background: white;
-                    z-index: 10;
-                    padding: 10px 0;
-                    border-top: 1px solid #ccc;
-                ">
-            </div>
-        </div> 
-
-        <script>
-        const docsData2 = {{ docs_data_2 | tojson | safe }};
-        const accordionContainer2 = document.getElementById('topicDocsContent2');
-        const paginationContainer2 = document.getElementById('paginationContainer2');
-
-        currentPage = 0;
-        activeCharts = {};
-
-        function clearPage2() {
-            Object.values(activeCharts).forEach(chart => chart.destroy());
-            activeCharts = {};
-            accordionContainer2.innerHTML = '';
-        }
-
-        function renderPage2(page) {
-            clearPage2();
-
-            const start = page * PAGE_SIZE;
-            const end = Math.min(start + PAGE_SIZE, docsData2.length);
-
-            for (let i = start; i < end; i++) {
-                const doc = docsData2[i];
-                const index = i;
-
-                const docGroup = document.createElement('div');
-                docGroup.className = 'doc-group mb-3 border rounded-2 shadow-sm';
-
-                const header = document.createElement('div');
-                header.className =
-                    'dataset-header doc-header list-group-item fw-bold bg-light d-flex justify-content-between';
-                header.style.cursor = 'pointer';
-                header.innerHTML = `
-                    <div style="margin-left:15px;">Document ${doc.id}</div>
-                    <span class="chev" style="transition: transform .2s;">▸</span>
-                `;
-
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'list-group doc-content';
-                contentDiv.style.display = 'none';
-                contentDiv.dataset.initialized = "false";
-
-                header.addEventListener('click', () => {
-                    const chev = header.querySelector('.chev');
-                    const open = contentDiv.style.display === 'block';
-
-                    if (!open) {
-                        contentDiv.style.display = 'block';
-                        chev.style.transform = 'rotate(90deg)';
-
-                        if (contentDiv.dataset.initialized === "false") {
-                            contentDiv.dataset.initialized = "true";
-
-                            const flexDiv = document.createElement('div');
-                            flexDiv.style.display = 'flex';
-                            flexDiv.style.maxHeight = '350px';
-
-                            const leftDiv = document.createElement('div');
-                            leftDiv.style.flex = '1';
-                            leftDiv.style.padding = '10px';
-                            leftDiv.style.borderRight = '1px solid #ccc';
-                            leftDiv.innerHTML = `<h5 style="text-align:center;">Text</h5><hr><p>${doc.text}</p>`;
-
-                            const rightDiv = document.createElement('div');
-                            rightDiv.style.flex = '1';
-                            rightDiv.style.padding = '10px';
-                            rightDiv.style.textAlign = 'center';
-                            rightDiv.innerHTML = `<h5>Chart</h5><hr>`;
-
-                            const canvas = document.createElement('canvas');
-                            canvas.style.width = '200px';
-                            canvas.style.height = '200px';
-                            canvas.style.display = 'block';
-                            canvas.style.margin = '0 auto';
-                            rightDiv.appendChild(canvas);
-
-                            flexDiv.appendChild(leftDiv);
-                            flexDiv.appendChild(rightDiv);
-                            contentDiv.appendChild(flexDiv);
-
-                            const topicKeys = Object.keys(doc.topics);
-                            const topicValues = Object.values(doc.topics);
-
-                            activeCharts[index] = new Chart(canvas, {
-                                type: 'pie',
-                                data: {
-                                    labels: topicKeys.map(t => "Topic " + t.replace('(', '\n').replace(')', '').replace('||', '\n')),
-                                    datasets: [{
-                                        data: topicValues,
-                                        backgroundColor: generateColors(topicKeys.length)
-                                    }]
-                                },
-                                options: {
-                                    responsive: false,
-                                    maintainAspectRatio: false,
-                                    plugins: { legend: { display: false } }
-                                }
-                            });
-                        }
-                    } else {
-                        contentDiv.style.display = 'none';
-                        chev.style.transform = 'rotate(0deg)';
-                    }
-                });
-
-                docGroup.appendChild(header);
-                docGroup.appendChild(contentDiv);
-                accordionContainer2.appendChild(docGroup);
-            }
-        }
-
-        function renderPagination2() {
-            paginationContainer2.innerHTML = '';
-            const totalPages = Math.ceil(docsData2.length / PAGE_SIZE);
-
-            const tempBtn = document.createElement('button');
-            tempBtn.style.visibility = 'hidden';
-            tempBtn.style.position = 'absolute';
-            tempBtn.innerText = totalPages;
-            document.body.appendChild(tempBtn);
-            let btnWidth = tempBtn.offsetWidth + 10;
-
-            const createButton = (text, pageNum, disabled = false, active = false) => {
-                const btn = document.createElement('button');
-                btn.style.width = btnWidth + 'px';
-                btn.innerText = text;
-                if (disabled) btn.disabled = true;
-                if (active) btn.classList.add('active');
-                btn.addEventListener('click', () => {
-                    currentPage = pageNum;
-                    renderPage2(currentPage);
-                    renderPagination2();
-                });
-                paginationContainer2.appendChild(btn);
-            };
-
-            btnWidth = 60;
-            createButton('Prev', Math.max(0, currentPage - 1), currentPage === 0);
-
-            let startPage = Math.max(0, currentPage - Math.floor(MAX_BUTTONS / 2));
-            let endPage = startPage + MAX_BUTTONS - 1;
-            if (endPage >= totalPages) {
-                endPage = totalPages - 1;
-                startPage = Math.max(0, endPage - MAX_BUTTONS + 1);
-            }
-
-            btnWidth = tempBtn.offsetWidth + 10;
-            if (startPage > 0) {
-                createButton('1', 0);
-                if (startPage > 1) {
-                    const dots = document.createElement('span');
-                    dots.innerText = '...';
-                    paginationContainer2.appendChild(dots);
-                }
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                createButton((i + 1), i, false, i === currentPage);
-            }
-
-            if (endPage < totalPages - 1) {
-                if (endPage < totalPages - 2) {
-                    const dots = document.createElement('span');
-                    dots.innerText = '...';
-                    paginationContainer2.appendChild(dots);
-                }
-                createButton(totalPages, totalPages - 1);
-            }
-
-            btnWidth = 60;
-            createButton('Next', 30, currentPage === totalPages - 1);
-            document.body.removeChild(tempBtn);
-        }
-
-        renderPage2(currentPage);
-        renderPagination2();
-        </script>
-        {% endif %}
-
-        <!-- Option 2: Keywords only -->
-        <div class="topic-accordion" style="display: none; overflow-y: auto; overflow-x: hidden;">
-
-            {% for topic in topic_keys["topics"] %}
-            <div class="topic-group mb-3 border rounded-2 shadow-sm">
-
-                <!-- Header: Checkbox + Topic title -->
-                <div class="dataset-header topic-header list-group-item hover-text-primary fw-bold bg-light d-flex align-items-center justify-content-between"
-                    role="button"
-                    aria-expanded="false"
-                    aria-controls="topic-content-{{ loop.index }}"
-                    style="cursor: pointer; border: none;">
-
-                    <div class="d-flex align-items-center" style="margin-left: 15px;">
-                        <input type="checkbox"
-                            class="form-check-input topic-checkbox"
-                            name="topic_select"
-                            value="{{ topic.id }}"
-                            style="cursor: pointer; margin-right: 10px; margin-top: 0; transform: scale(1.1); accent-color: #0d6efd;">
-                        <label class="mb-0">Topic {{ topic.id }} {{ topic.label }}</label>
-                    </div>
-
-                    <div class="d-flex align-items-center">
-                        <span class="chev" aria-hidden="true" style="transition: transform .2s;">▸</span>
-                    </div>
-
-                </div>
-
-                <!-- Topic keywords -->
-                <ul id="topic-content-{{ loop.index }}" 
-                    class="list-group topic-list"
-                    style="display: none; background-color: #f8f9fa; margin: 0; border-top: 1px solid #ddd;">
-
-                    {% for lang in ['EN', 'ES', 'DE', 'IT'] %}
-                        {% if topic['keywords_' + lang] is defined %}
-                        <li class="list-group-item topic-item"
-                            style="background-color: #f0f0f0; border: none; border-bottom: 1px solid #e0e0e0;">
-                            <strong>{{ lang }}:</strong> {{ topic['keywords_' + lang] | join(' ') }}
-                        </li>
-                        {% endif %}
-                    {% endfor %}
-
-                </ul>
-
-            </div>
-            {% endfor %}
         </div>
 
-        <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const topics = {{ topic_keys | tojson }};
-            
-            window.currentView = "visual";
-            window.currentVisibleTopics = [];
 
-            const btnVisual = document.getElementById("btn-visual");
-            const btnText = document.getElementById("btn-text");
-            const btnDocs1 = document.getElementById("btn-docs1");
-            const btnDocs2 = document.getElementById("btn-docs2");
-            const topicVis = document.getElementById("topicVis");
-            const topicDocs1 = document.getElementById("topicDocs1");
-            const topicDocs2 = document.getElementById("topicDocs2");
-            const topicAccordion = document.querySelector(".topic-accordion");
+        {% for dataset, topicmodel_list in dataset_detection.items() %}
+        <div class="dataset-group mb-3 card border-0 shadow-sm">
 
-            function drawTopicVis(topicsData) {
-                const container = topicVis;
-                container.innerHTML = "";
+            <div class="dataset-header list-group-item hover-text-primary fw-bold bg-body-tertiary" role="button"
+                aria-expanded="false" aria-controls="content-{{ loop.index }}" style="cursor:pointer; border:none;">
+                Dataset: {{ dataset }}
+                <span class="chev" aria-hidden="true" style="float:right; transition: transform .2s;">▸</span>
+            </div>
 
-                const width = container.clientWidth;
-                const height = container.clientHeight;
+            <ul id="content-{{ loop.index }}" class="list-group list-group-flush dataset-list"
+                style="display:none; margin:0; border-top:1px solid var(--bs-border-color);">
+                {% for tm in topicmodel_list %}
+                <li class="list-group-item dataset-item hover-text-primary dataset-entry"
+                    style="background-color:var(--bs-tertiary-bg); border:none; border-bottom:1px solid var(--bs-border-color);"
+                    dataset-tm='{ "dataset_name": "{{ dataset }}", "topic_model": "{{ tm }}" }'>
+                    <a class="dataset-link d-block px-2 py-1">
+                        Topic Model: {{ tm }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
 
-                const svg = d3.select(container)
-                    .append("svg")
-                    .attr("width", width)
-                    .attr("height", height);
+    {% elif topic_keys %}
 
-                svg.append("rect")
-                    .attr("x", 0)
-                    .attr("y", 0)
-                    .attr("width", width)
-                    .attr("height", height)
-                    .style("fill", "rgba(255,255,255,0.6)");
+    <!-- Option 1: Visual -->
+    <div id="topicVis" style="display: block; width: 100%; height: 100%; overflow: hidden;"></div>
 
-                const margin = {top: 20, right: 20, bottom: 40, left: 40};
-                const innerWidth = width - margin.left - margin.right;
-                const innerHeight = height - margin.top - margin.bottom;
+    <!-- Option 3: Docs lang1 -->
+    {% if docs_data_1 %}
 
-                const g = svg.append("g")
-                    .attr("transform", `translate(${margin.left},${margin.top})`);
+    <div id="topicDocs1" style="display: none; width: 100%; height: 100%; position: relative;">
+        <div id="topicDocsContent1" style="overflow-y: auto; overflow-x: hidden; padding-bottom: 10px;">
+        </div>
 
-                // Scales
-                const xExtent = d3.extent(topics.topics, d => d.x);
-                const yExtent = d3.extent(topics.topics, d => d.y);
+        <div id="paginationContainer1" class="d-flex justify-content-center align-items-center" style="
+                    background: var(--bs-body-bg);
+                    padding: 10px 0;
+                    border-top: 1px solid var(--bs-border-color);
+                    flex-shrink: 0;
+                ">
+        </div>
+    </div>
 
-                const xScale = d3.scaleLinear().domain(xExtent).range([0, innerWidth]);
-                const yScale = d3.scaleLinear().domain(yExtent).range([innerHeight, 0]);
+    {% endif %}
 
-                const xMid = (xExtent[0] + xExtent[1]) / 2;
-                const yMid = (yExtent[0] + yExtent[1]) / 2;
+    <!-- Option 4: Docs lang2 -->
+    {% if docs_data_2 %}
 
-                // X Axis
-                g.append("g")
-                .attr("transform", `translate(0, ${yScale(yMid)})`)
-                .call(d3.axisBottom(xScale).ticks(5));
+    <div id="topicDocs2" style="display: none; width: 100%; height: 100%; position: relative;">
+        <div id="topicDocsContent2" style="overflow-y: auto; overflow-x: hidden; padding-bottom: 10px;">
+        </div>
 
-                // Y Axis
-                g.append("g")
-                .attr("transform", `translate(${xScale(xMid)},0)`)
-                .call(d3.axisLeft(yScale).ticks(5));
+        <div id="paginationContainer2" class="d-flex justify-content-center align-items-center" style="
+                    background: var(--bs-body-bg);
+                    padding: 10px 0;
+                    border-top: 1px solid var(--bs-border-color);
+                    flex-shrink: 0;
+                ">
+        </div>
+    </div>
 
-                const sizeExtent = d3.extent(topicsData, d => d.size);
-                const sizeScale = d3.scaleLinear().domain(sizeExtent).range([20, 60]);
-                const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
-                    .domain(topicsData.map(d => d.id));
+    {% endif %}
 
-                // Tooltip
-                const tooltip = d3.select("body")
-                    .append("div")
-                    .attr("class", "tooltip-topic")
-                    .style("position", "absolute")
-                    .style("padding", "8px")
-                    .style("background-color", "rgba(0,0,0,0.7)")
-                    .style("color", "#fff")
-                    .style("border-radius", "4px")
-                    .style("pointer-events", "none")
-                    .style("opacity", 0);
+    <!-- Option 2: Keywords only -->
+    <div class="topic-accordion" style="display: none; height: 100%; overflow-y: auto; overflow-x: hidden;">
 
-                // Topic Bubbles
-                const nodes = g.selectAll("g.node")
-                    .data(topicsData)
-                    .enter()
-                    .append("g")
-                    .attr("class", "node")
-                    .attr("transform", d => `translate(${xScale(d.x)},${yScale(d.y)})`)
-                    .style("cursor", "pointer")
-                    .on("mousemove", function(event, d) {
-                        let html_node = `<strong>Topic ${d.id} ${d.label}</strong><br>`;
-                        const possibleLangs = ["EN", "ES", "IT", "DE"];
-                        possibleLangs.forEach(lang => {
-                            const key = `keywords_${lang}`;
-                            if (d[key]?.length) {
-                                html_node += `<b>${lang}:</b> ${d[key].join(", ")}<br>`;
-                            }
-                        });
+        {% for topic in topic_keys["topics"] %}
+        <div class="topic-group mb-3 card border-0 shadow-sm">
 
-                        tooltip
-                            .style("opacity", 1)
-                            .html(html_node)
-                            .style("left", (event.pageX + 15) + "px")
-                            .style("top", (event.pageY + 15) + "px");
-                    })
-                    .on("mouseout", () => tooltip.style("opacity", 0))
-                    .on("click", function(event, d) {
-                        if (window.currentVisibleTopics.includes(d.id)) {
-                            window.currentVisibleTopics = window.currentVisibleTopics.filter(x => x !== d.id);
-                            d3.select(this).select("circle").style("stroke", "none");
-                        } else {
-                            window.currentVisibleTopics.push(d.id);
-                            d3.select(this).select("circle")
-                                .style("stroke", "rgba(255,0,0,0.8)")
-                                .style("stroke-width", 2);
-                        }
-                        console.log("Tópicos seleccionados:", [...window.currentVisibleTopics]);
-                    });
+            <!-- Header: Checkbox + Topic title -->
+            <div class="dataset-header topic-header list-group-item hover-text-primary fw-bold bg-body-tertiary d-flex align-items-center justify-content-between"
+                role="button" aria-expanded="false" aria-controls="topic-content-{{ loop.index }}"
+                style="cursor: pointer; border: none;">
 
-                const normPos = d => ((d.x - xExtent[0])/(xExtent[1]-xExtent[0]) + (d.y - yExtent[0])/(yExtent[1]-yExtent[0])) / 2;
+                <div class="d-flex align-items-center" style="margin-left: 15px;">
+                    <input type="checkbox" class="form-check-input topic-checkbox" name="topic_select"
+                        value="{{ topic.id }}"
+                        style="cursor: pointer; margin-right: 10px; margin-top: 0; transform: scale(1.1); accent-color: var(--bs-primary);">
+                    <label class="mb-0">Topic {{ topic.id }} {{ topic.label }}</label>
+                </div>
 
-                // Color Bubble
-                nodes.append("circle")
-                    .attr("r", d => sizeScale(d.size))
-                    .style("fill", d => d3.interpolateViridis(normPos(d)))
-                    .style("opacity", 0.85)
-                    .each(function(d) {
-                        if (window.currentVisibleTopics.includes(d.id)) {
-                            d3.select(this)
-                            .style("stroke", "rgba(255,0,0,0.8)")
-                            .style("stroke-width", 2);
-                        }
-                    });
+                <div class="d-flex align-items-center">
+                    <span class="chev" aria-hidden="true" style="transition: transform .2s;">▸</span>
+                </div>
 
-                nodes.select("circle")
-                    .on("mouseover", function(event, d) {
-                        d3.select(this)
-                        .transition()
-                        .duration(200)
-                        .attr("r", sizeScale(d.size) * 1.1)
-                        .style("fill", "rgba(255,0,0,0.5)");
-                    })
-                    .on("mouseout", function(event, d) {
-                        d3.select(this)
-                        .transition()
-                        .duration(200)
-                        .attr("r", sizeScale(d.size))
-                        .style("fill", d => d3.interpolateViridis(normPos(d)));
-                    });
+            </div>
 
-                nodes.append("text")
-                    .text(d => d.id)
-                    .attr("text-anchor", "middle")
-                    .attr("alignment-baseline", "middle")
-                    .style("fill", "#fff")
-                    .style("font-size", "12px")
-                    .style("pointer-events", "none");
-            }
+            <!-- Topic keywords -->
+            <ul id="topic-content-{{ loop.index }}" class="list-group list-group-flush topic-list"
+                style="display: none; margin: 0; border-top: 1px solid var(--bs-border-color);">
 
-            drawTopicVis(topics.topics);
+                {% for lang in ['EN', 'ES', 'DE', 'IT'] %}
+                {% if topic['keywords_' + lang] is defined %}
+                <li class="list-group-item topic-item"
+                    style="background-color: var(--bs-tertiary-bg); border: none; border-bottom: 1px solid var(--bs-border-color);">
+                    <strong>{{ lang }}:</strong> {{ topic['keywords_' + lang] | join(' ') }}
+                </li>
+                {% endif %}
+                {% endfor %}
 
-            // Toggle Visual / Text
-            btnVisual.addEventListener("click", () => {
-                window.currentView = "visual";
-                topicVis.style.display = "block";
-                topicDocs1.style.display = "none";
-                topicDocs2.style.display = "none";
-                topicAccordion.style.display = "none";
+            </ul>
 
-                btnVisual.classList.add("active", "btn-primary");
-                btnVisual.classList.remove("btn-outline-primary");
-                btnText.classList.remove("active", "btn-primary");
-                btnText.classList.add("btn-outline-primary");
-                btnDocs1.classList.remove("active", "btn-primary");
-                btnDocs1.classList.add("btn-outline-primary");
-                btnDocs2.classList.remove("active", "btn-primary");
-                btnDocs2.classList.add("btn-outline-primary");
+        </div>
+        {% endfor %}
+    </div>
 
-                drawTopicVis(topics.topics);
-            });
 
-            btnText.addEventListener("click", () => {
-                window.currentView = "text";
-                topicVis.style.display = "none";
-                topicDocs1.style.display = "none";
-                topicDocs2.style.display = "none";
-                topicAccordion.style.display = "block";
-
-                btnText.classList.add("active", "btn-primary");
-                btnText.classList.remove("btn-outline-primary");
-                btnVisual.classList.remove("active", "btn-primary");
-                btnVisual.classList.add("btn-outline-primary");
-                btnDocs1.classList.remove("active", "btn-primary");
-                btnDocs1.classList.add("btn-outline-primary");
-                btnDocs2.classList.remove("active", "btn-primary");
-                btnDocs2.classList.add("btn-outline-primary");
-            });
-
-            btnDocs1.addEventListener("click", () => {
-                window.currentView = "docs";
-                topicVis.style.display = "none";
-                topicDocs1.style.display = "block";
-                topicDocs2.style.display = "none";
-                topicAccordion.style.display = "none";
-
-                btnDocs1.classList.add("active", "btn-primary");
-                btnDocs1.classList.remove("btn-outline-primary");
-                btnDocs2.classList.remove("active", "btn-primary");
-                btnDocs2.classList.add("btn-outline-primary");
-                btnVisual.classList.remove("active", "btn-primary");
-                btnVisual.classList.add("btn-outline-primary");
-                btnText.classList.remove("active", "btn-primary");
-                btnText.classList.add("btn-outline-primary");
-            });
-
-            btnDocs2.addEventListener("click", () => {
-                window.currentView = "docs";
-                topicVis.style.display = "none";
-                topicDocs1.style.display = "none";
-                topicDocs2.style.display = "block";
-                topicAccordion.style.display = "none";
-
-                btnDocs1.classList.remove("active", "btn-primary");
-                btnDocs1.classList.add("btn-outline-primary");
-                btnDocs2.classList.add("active", "btn-primary");
-                btnDocs2.classList.remove("btn-outline-primary");
-                btnVisual.classList.remove("active", "btn-primary");
-                btnVisual.classList.add("btn-outline-primary");
-                btnText.classList.remove("active", "btn-primary");
-                btnText.classList.add("btn-outline-primary");
-            });
-
-            window.addEventListener("resize", () => {
-                if (window.currentView === "visual") {
-                    drawTopicVis(topics.topics);
-                }
-            });
-        });
-        </script>
-
-        {% else %}
-            <p class="lead">No datasets found or error loading datasets.</p>
-        {% endif %}
+    {% else %}
+    <p class="lead">No datasets found or error loading datasets.</p>
+    {% endif %}
 
     {% elif status == 'completed' %}
-        {% if result_mind and result_columns %}
-            <!-- Loading overlay -->
-            <div id="loadingOverlay" style="
+    {% if result_mind and result_columns %}
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" style="
                 position: fixed;
                 top:0; left:0;
                 width:100%; height:100%;
@@ -907,103 +293,88 @@
                 font-size: 1.5rem;
                 color: #333;
             ">
-                <div>
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="sr-only">Loading...</span>
+        <div>
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div style="margin-top:10px;">Loading, please wait...</div>
+        </div>
+    </div>
+
+
+
+
+
+    <!-- Table Result MIND -->
+    <table id="resultsTable" class="table table-striped table-hover table-bordered align-middle">
+        <thead>
+            <tr>
+                {% for col in result_columns %}
+                {% if col in ['label', 'final_label'] %}
+                <th class="th-with-filter" style="position: relative;">
+                    {{ col }}
+                    <div class="dropdown">
+                        <button class="btn btn-light btn-sm filter-icon-btn filter-btn" type="button"
+                            id="dropdown{{ loop.index0 }}" data-bs-toggle="dropdown" aria-haspopup="true"
+                            aria-expanded="false" data-column="{{ col }}">
+                            <i class="bi bi-droplet"></i>
+                        </button>
+                        <div class="dropdown-menu p-2" aria-labelledby="dropdown{{ loop.index0 }}"
+                            style="max-height: 200px; overflow-y: auto;">
+                            <!-- All -->
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="filter-checkbox" data-value="ALL" checked> All
+                            </label>
+                            {% set label_options = unique_labels if unique_labels else
+                            ['CONTRADICTION','CULTURAL_DISCREPANCY','NOT_ENOUGH_INFO','NO_DISCREPANCY'] %}
+                            {% for val in label_options %}
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="filter-checkbox" data-value="{{ val }}" checked> {{ val }}
+                            </label>
+                            {% endfor %}
+                        </div>
                     </div>
-                    <div style="margin-top:10px;">Loading, please wait...</div>
-                </div>
-            </div>
+                </th>
+                {% else %}
+                <th>{{ col }}</th>
+                {% endif %}
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody id="resultsBody">
 
-            <script>
-            function showOverlay() {
-                document.getElementById("loadingOverlay").style.display = "flex";
-            }
-
-            function hideOverlay() {
-                document.getElementById("loadingOverlay").style.display = "none";
-            }
-
-            window.addEventListener("load", () => {
-                hideOverlay();
-            });
-            </script>
-
-
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-            <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css">
-
-            <!-- Table Result MIND -->
-            <table id="resultsTable" class="table table-striped table-hover table-bordered align-middle">
-                <thead class="thead-light">
-                    <tr>
-                        {% for col in result_columns %}
-                            {% if col in ['label', 'final_label'] %}
-                            <th class="th-with-filter" style="position: relative;">
-                                {{ col }}
-                                <div class="dropdown">
-                                    <button class="btn btn-light btn-sm filter-icon-btn filter-btn"
-                                            type="button" id="dropdown{{ loop.index0 }}"
-                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                                            data-column="{{ col }}">
-                                        <i class="bi bi-droplet"></i>
-                                    </button>
-                                    <div class="dropdown-menu p-2" aria-labelledby="dropdown{{ loop.index0 }}"
-                                        style="max-height: 200px; overflow-y: auto;">
-                                        <!-- All -->
-                                        <label class="dropdown-item">
-                                            <input type="checkbox" class="filter-checkbox" data-value="ALL" checked> All
-                                        </label>
-                                        {% set label_options = ['CONTRADICTION','CULTURAL_DISCREPANCY','NOT_ENOUGH_INFO','NO_DISCREPANCY'] %}
-                                        {% for val in label_options %}
-                                        <label class="dropdown-item">
-                                            <input type="checkbox" class="filter-checkbox" data-value="{{ val }}" checked> {{ val }}
-                                        </label>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </th>
-                            {% else %}
-                            <th>{{ col }}</th>
-                            {% endif %}
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody id="resultsBody">
-                
-                </tbody>
-            </table>
-        {% else %}
-            <div class="alert alert-warning text-center mt-5">
-                <strong>No data available.</strong>
-            </div>
-        {% endif %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-warning text-center mt-5">
+        <strong>No data available.</strong>
+    </div>
+    {% endif %}
     {% else %}
     <p>No datasets available.</p>
     {% endif %}
 </div>
 
 <div class="modal fade" id="docModal" tabindex="-1" role="dialog" aria-labelledby="docModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="docModalLabel">Document Content</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted">Loading document content...</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-      </div>
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="docModalLabel">Document Content</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Loading document content...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <!-- Modal de Alert End Process Analysis Discrepancy -->
-<div id="exitModal" class="exit-modal" style="display: none;" tabindex="-1" role="dialog" aria-labelledby="exitModalLabel" aria-hidden="true">
+<div id="exitModal" class="exit-modal" style="display: none;" tabindex="-1" role="dialog"
+    aria-labelledby="exitModalLabel" aria-hidden="true">
     <div class="exit-modal-dialog" role="document">
         <div class="exit-modal-content p-3">
             <div class="exit-modal-header">
@@ -1023,61 +394,13 @@
     </div>
 </div>
 
-<script>
-let shouldWarn = false;
-</script>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    window.addEventListener("beforeunload", e => {
-        if (!shouldWarn) return;
-        e.preventDefault();
-        e.returnValue = "";
-    });
-
-    document.addEventListener("click", e => {
-        const el = e.target.closest("a, button[data-navigate]");
-        if (!el) return;
-
-        if (!shouldWarn) return;
-        if (el.hasAttribute("data-no-warning")) return;
-
-        e.preventDefault();
-        const url = el.href || el.dataset.navigate;
-        showExitModal(url);
-    });
-
-    const modal = document.getElementById("exitModal");
-    const exitYes = document.getElementById("exitYes");
-    const exitNo = document.getElementById("exitNo");
-    const exitClose = document.getElementById("exitModalClose");
-
-    function showExitModal(url) {
-        modal.style.display = "flex";
-        requestAnimationFrame(() => {
-            modal.classList.add("show");
-        });
-
-        exitYes.onclick = () => {
-            shouldWarn = false;
-            window.removeEventListener("beforeunload", () => {});
-            window.location.href = url;
-        };
-
-        exitNo.onclick = exitClose.onclick = () => {
-            modal.classList.remove("show");
-            modal.addEventListener('transitionend', () => {
-                modal.style.display = "none";
-            }, { once: true });
-        };
-    }
-});
-</script>
 
 {% if result_mind and result_columns %}
 <div id="datatable-controls-1" class="d-flex align-items-center mb-2">
     <!-- Filter Columns -->
-    <button class="btn btn-light dropdown-toggle" type="button" id="columnFilterBtn" style="margin-right: 15px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <button class="btn btn-light dropdown-toggle" type="button" id="columnFilterBtn" style="margin-right: 15px;"
+        data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         Filter Columns
     </button>
     <div class="dropdown-menu p-3" aria-labelledby="columnFilterBtn" style="max-height: 250px; overflow-y: auto;">
@@ -1087,655 +410,153 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         {% for col in result_columns %}
         <div class="form-check">
-            <input class="form-check-input column-checkbox" type="checkbox" value="{{ col }}" id="column_{{ loop.index0 }}" checked>
+            <input class="form-check-input column-checkbox" type="checkbox" value="{{ col }}"
+                id="column_{{ loop.index0 }}" checked>
             <label class="form-check-label" for="column_{{ loop.index0 }}">{{ col }}</label>
         </div>
         {% endfor %}
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var defaultVisibleCols = ['question','anchor_passage','comparison_passage','anchor_answer','comparison_answer','label','final_label','reason'];
 
-    document.querySelectorAll('.column-checkbox').forEach(function(checkbox) {
-        var colValue = checkbox.value;
-        if (colValue === 'ALL') {
-            checkbox.checked = true;
-        } else {
-            checkbox.checked = defaultVisibleCols.includes(colValue);
-        }
-    });
-});
-</script>
+<!-- Label quick-filter strip -->
+<div id="label-filter-bar" class="d-flex flex-wrap align-items-center gap-2 mb-2">
+    <span class="text-muted small me-1">Filter by label:</span>
+    <button class="btn btn-sm btn-secondary active" id="lf-btn-all" data-lf-value="ALL">All</button>
+    {% set lf_labels = unique_labels if unique_labels else
+    ['CONTRADICTION','CULTURAL_DISCREPANCY','NOT_ENOUGH_INFO','NO_DISCREPANCY'] %}
+    {% for val in lf_labels %}
+    <button class="btn btn-sm label-filter-quick" data-lf-value="{{ val }}" style="border:none;">{{ val }}</button>
+    {% endfor %}
+    <span class="ms-auto text-muted small" id="label-filter-count"></span>
+</div>
 
-<div id="datatable-controls-2" class="d-flex justify-content-between mb-3">
-    <button id="exportXlsxBtn" class="btn btn-success mb-3">
+<div id="datatable-controls-2" class="d-flex justify-content-between align-items-center mb-3">
+    <button id="exportXlsxBtn" class="btn btn-success">
         <i class="bi bi-download"></i> Save & Download XLSX
     </button>
 </div>
 
-<script>
-function updateColors() {
-    // final_label
-    $('.final-label-select').each(function() {
-        var value = $(this).val();
-        var bgColor, textColor;
-        switch(value) {
-            case 'CONTRADICTION': bgColor = '#dc3545'; textColor = '#fff'; break;
-            case 'CULTURAL_DISCREPANCY': bgColor = '#ffc107'; textColor = '#212529'; break;
-            case 'NOT_ENOUGH_INFO': bgColor = '#17a2b8'; textColor = '#fff'; break;
-            case 'NO_DISCREPANCY': bgColor = '#28a745'; textColor = '#fff'; break;
-            default: bgColor = '#6c757d'; textColor = '#fff';
-        }
-        $(this).css({ 'background-color': bgColor, 'color': textColor });
-        $(this).siblings('.custom-arrow').css('color', textColor);
-    });
-
-    // label
-    $('.badge-label').each(function() {
-        var value = $(this).data('label-value');
-        var bgColor, textColor;
-        switch(value) {
-            case 'CONTRADICTION': bgColor = '#dc3545'; textColor = '#fff'; break;
-            case 'CULTURAL_DISCREPANCY': bgColor = '#ffc107'; textColor = '#212529'; break;
-            case 'NOT_ENOUGH_INFO': bgColor = '#17a2b8'; textColor = '#fff'; break;
-            case 'NO_DISCREPANCY': bgColor = '#28a745'; textColor = '#fff'; break;
-            default: bgColor = '#6c757d'; textColor = '#fff';
-        }
-        $(this).css({ 'background-color': bgColor, 'color': textColor });
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    var defaultVisibleCols = ['question','anchor_passage','comparison_passage','anchor_answer','comparison_answer','label','final_label','reason'];
-    var columns = {{ columns_json|safe }};
-    var allResultCols = {{ result_columns|tojson|safe }};
-    var nonOrderable = {{ non_orderable_indices|safe }};
-
-    var visibleIndices = [];
-    for (var i = 0; i < columns.length; i++) {
-        if (defaultVisibleCols.includes(columns[i].name)) visibleIndices.push(i);
-    }
-    var hiddenIndices = [];
-    for (var i = 0; i < columns.length; i++) {
-        if (!visibleIndices.includes(i)) hiddenIndices.push(i);
-    }
-
-    var table = $('#resultsTable').DataTable({
-        data: [],
-        columns: columns,
-        columnDefs: [
-            {
-                targets: "_all",
-                createdCell: function(td, cellData, rowData, row, col) {
-                    td.classList.add('truncated');
-                }
-            },
-            { orderable: false, targets: nonOrderable },
-        ],
-        pageLength: 10,
-        orderCellsTop: true,
-        autoWidth: false,
-        language: {
-            zeroRecords: "No records were found",
-            info: "Showing _START_ to _END_ from _TOTAL_ records",
-            infoEmpty: "Showing 0 records",
-            infoFiltered: ""
-        }
-    });
-
-    var possibleValues = {
-        'label': ['CONTRADICTION','CULTURAL_DISCREPANCY','NOT_ENOUGH_INFO','NO_DISCREPANCY'],
-        'final_label': ['CONTRADICTION','CULTURAL_DISCREPANCY','NOT_ENOUGH_INFO','NO_DISCREPANCY']
-    };
-
-    var activeFilters = {
-        'label': possibleValues['label'].slice(),
-        'final_label': possibleValues['final_label'].slice()
-    };
-
-    function applyVisibleColumns(visibleColumns) {
-        table.columns().every(function(index) {
-            var colName = this.settings()[0].aoColumns[index].name;
-            this.visible(visibleColumns.includes(colName));
-        });
-    }
-
-    var visibleColumns = $('.column-checkbox:checked').map(function() {
-        return $(this).val();
-    }).get();
-
-    if (visibleColumns.length === 0) {
-        visibleColumns = allResultCols.filter(c => defaultVisibleCols.includes(c));
-    }
-
-    if (visibleColumns.length === allResultCols.length) {
-        $('#columnAll').prop('checked', true);
-    } else {
-        $('#columnAll').prop('checked', false);
-    }
-
-    applyVisibleColumns(visibleColumns);
-
-    $('body').on('change', '.column-all', function() {
-        var checked = $(this).prop('checked');
-        if (checked) {
-            $('.column-checkbox').prop('checked', true);
-            visibleColumns = allResultCols.slice();
-        } else {
-            $('.column-checkbox').prop('checked', false);
-            visibleColumns = [];
-        }
-        applyVisibleColumns(visibleColumns);
-    });
-
-    $('body').on('change', '.column-checkbox', function() {
-        visibleColumns = $('.column-checkbox:checked').map(function() {
-            return $(this).val();
-        }).get();
-
-        if (visibleColumns.length === allResultCols.length) {
-            $('#columnAll').prop('checked', true);
-        } else {
-            $('#columnAll').prop('checked', false);
-        }
-
-        applyVisibleColumns(visibleColumns);
-    });
-    
-
-    // Colors span label final_label
-    updateColors();
-    $('#resultsTable').on('draw.dt', function() {
-        updateColors();
-    });
-
-    $('body').on('change', '.final-label-select', function() {
-        updateColors();
-        var row = $(this).closest('tr');
-        table.row(row).invalidate().draw(false);
-    });
-
-    // Cols filter
-    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-        for (var colName in activeFilters) {
-            var selectedValues = activeFilters[colName];
-            if (!selectedValues || selectedValues.length === 0) return false;
-
-            var colIndex = table.column(colName + ":name").index();
-            var cellNode = table.cell(dataIndex, colIndex).node();
-
-            var cellValue;
-
-            if (colName === 'final_label') {
-                cellValue = $(cellNode).find('select.final-label-select').val();
-            } else {
-                var cellHtml = $(cellNode).html() || "";
-                cellValue = cellHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-            }
-
-            if (!selectedValues.includes(cellValue)) {
-                return false;
-            }
-        }
-        return true;
-    });
-
-    // User change value final_label
-    $('body').on('change', '.final-label-select', function() {
-        var row = $(this).closest('tr');
-        var value = $(this).val();
-        
-        var table = $('#resultsTable').DataTable();
-        table.row(row).invalidate().draw(false);
-
-        activeFilters['final_label'] = table.rows().nodes().to$().find('.final-label-select').map(function() {
-            return $(this).val();
-        }).get();
-    });
-
-    // Filter checkbox label final_label
-    $('body').on('click', '.filter-checkbox', function(e) {
-        e.stopPropagation();
-
-        var checkbox = $(this);
-        var value = checkbox.data('value');
-        var dropdown = checkbox.closest('.dropdown-menu');
-        var btn = dropdown.siblings('.filter-btn');
-        var colName = btn.data('column');
-        var allCheckbox = dropdown.find('input.filter-checkbox[data-value="ALL"]');
-
-        if (!activeFilters[colName]) activeFilters[colName] = [];
-
-        if (value === "ALL") {
-            if (checkbox.prop('checked')) {
-                activeFilters[colName] = possibleValues[colName].slice();
-                dropdown.find('input.filter-checkbox').prop('checked', true);
-            } else {
-                activeFilters[colName] = [];
-                dropdown.find('input.filter-checkbox').prop('checked', false);
-            }
-        } else {
-            if (checkbox.prop('checked')) {
-                if (!activeFilters[colName].includes(value)) activeFilters[colName].push(value);
-            } else {
-                activeFilters[colName] = activeFilters[colName].filter(v => v !== value);
-            }
-
-            if (activeFilters[colName].length === possibleValues[colName].length) {
-                allCheckbox.prop('checked', true);
-            } else {
-                allCheckbox.prop('checked', false);
-            }
-        }
-
-        if (activeFilters[colName].length > 0) {
-            btn.removeClass('btn-light').addClass('btn-primary');
-        } else {
-            btn.removeClass('btn-primary').addClass('btn-light');
-        }
-
-        table.draw();
-    });
-
-    $('body').on('click', '.dropdown-item', function(e) {
-        e.stopPropagation();
-    });
-
-    $('.filter-checkbox').each(function() {
-        var checkbox = $(this);
-        var value = checkbox.data('value');
-        var colName = checkbox.closest('.dropdown-menu').siblings('.filter-btn').data('column');
-        if (value === "ALL") {
-            checkbox.prop('checked', activeFilters[colName].length === possibleValues[colName].length);
-        } else {
-            checkbox.prop('checked', activeFilters[colName].includes(value));
-        }
-    });
-
-    table.draw();
-
-    $('#result');
-});
-</script>
-
-<script>
-async function loadChunk(start) {
-    showOverlay();
-    const urlParams = new URLSearchParams(window.location.search);
-    const res = await fetch(`/results_chunk?start=${start}&TM=${urlParams.get('TM')}&topics=${urlParams.get('topics')}`);
-    const data = await res.json();
-
-    const rows = data.rows;
-    const columns = data.columns;
-    let str = []
-    for (var i = 0; i<columns.length; i++) {
-        str.push(columns[i]['name'])
-    }
-    console.log(str);
-
-    const table = $('#resultsTable').DataTable();
-
-    table.clear();
-
-    const formattedRows = rows.map(row => {
-        return columns.map(col => {
-            const colName = col.name;
-
-            // final_label
-            if (colName === "final_label") {
-                return `<div class="custom-select-container">
-                            <select class="final-label-select">
-                                ${["CONTRADICTION","CULTURAL_DISCREPANCY","NOT_ENOUGH_INFO","NO_DISCREPANCY"]
-                                    .map(opt => `<option value="${opt}" ${row[colName] === opt ? "selected" : ""}>${opt}</option>`)
-                                    .join("")}
-                            </select>
-                            <span class="custom-arrow">▼</span>
-                        </div>`;
-            }
-
-            // label
-            if (colName === "label") {
-                return `<span class="badge-label" data-label-value="${row[colName] ?? ''}">
-                            ${row[colName] ?? ''}
-                        </span>`;
-            }
-
-            // text
-            let text = row[colName] ?? '';
-            if (typeof text === "string") {
-                const words = text.split(" ");
-                if (words.length > 50) text = words.slice(0,50).join(" ") + "...";
-            }
-
-            return text;
-        });
-    });
-
-    table.rows.add(formattedRows).draw();
-
-    var possibleValues = {
-        'label': ['CONTRADICTION','CULTURAL_DISCREPANCY','NOT_ENOUGH_INFO','NO_DISCREPANCY'],
-        'final_label': ['CONTRADICTION','CULTURAL_DISCREPANCY','NOT_ENOUGH_INFO','NO_DISCREPANCY']
-    };
-
-    var activeFilters = {
-        'label': possibleValues['label'].slice(),
-        'final_label': possibleValues['final_label'].slice()
-    };
-
-    $('body').on('change', '.final-label-select', function() {
-        var row = $(this).closest('tr');
-        var value = $(this).val();
-        
-        var table = $('#resultsTable').DataTable();
-        table.row(row).invalidate().draw(false);
-
-        activeFilters['final_label'] = table.rows().nodes().to$().find('.final-label-select').map(function() {
-            return $(this).val();
-        }).get();
-    });
-
-    $('body').off('change', '.final-label-select');
-    $('body').on('change', '.final-label-select', function() {
-        updateColors();
-    });
-    hideOverlay();
-}
-</script>
-
-<script>
-document.getElementById("rangeSelector").addEventListener("change", function() {
-    loadChunk(this.value);
-});
-</script>
-
-<script>
-window.addEventListener("load", function() {
-    hideOverlay();
-    const first = document.getElementById("rangeSelector").value;
-    loadChunk(first);
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-    var lengthDiv = $('#resultsTable_length');
-    var label = lengthDiv.find('label');
-    var select = label.find('select');
-
-    label.contents().filter(function() {
-        return this.nodeType === 3;
-    }).remove();
-
-    label.prepend('<span style="white-space: nowrap;">Show entries</span> ');
-
-    label.css({
-        display: 'flex',
-        alignItems: 'center',
-        gap: '5px',
-        marginBottom: '0'
-    });
-
-    select.addClass('ml-2');
-
-    $('#datatable-controls-1').append(lengthDiv);
-
-    $('#datatable-controls-2').append(
-        $('#resultsTable_info'),
-        $('#resultsTable_paginate'),
-        $('#exportXlsxBtn')
-    );
-
-    $('#resultsTable_filter').remove();
-
-    document.getElementById('jumbotron-detection').style.marginBottom = '15px';
-    document.getElementById('jumbotron-detection').style.marginTop = '-1rem';
-    document.getElementById('jumbotron-detection').style.height = '68vh';
-    document.getElementById('resultsTable_info').style.marginLeft = '10px';
-    document.getElementById('resultsTable_length').style.marginLeft = 'auto';
-});
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    var table = $('#resultsTable').DataTable();
-
-    $('#exportXlsxBtn').on('click', function() {
-        exportTableToXLSX();
-    });
-
-    function exportTableToXLSX(filename = 'results_mind.xlsx') {
-        const selector = document.getElementById('exportXlsxBtn');
-        if (!selector) {
-            console.error("Selector not found!");
-            return;
-        }
-
-        selector.style.pointerEvents = 'none';
-        selector.style.opacity = '0.6';
-        selector.classList.add('disabled');
-
-        originalHTML = selector.innerHTML;
-        selector.innerHTML = `
-            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-            Waiting...
-        `;
-        try {
-            var ws_data = [];
-
-            var headers = {{ result_columns | tojson }};
-            ws_data.push(headers);
-
-            var columnVisibility = [];
-            table.columns().every(function(idx) {
-                columnVisibility[idx] = this.visible();
-            });
-
-            table.columns().visible(true, false);
-
-            table.rows().nodes().each(function(tr) {
-                var row_data = [];
-                var $tr = $(tr);
-
-                headers.forEach(function(colName) {
-                    var colIdx = table.column(colName + ":name").index();
-                    var $td = $tr.find('td').eq(colIdx);
-                    var cell;
-
-                    if ($td.find('select.final-label-select').length) {
-                        cell = $td.find('select.final-label-select').val() || '';
-                    } else if ($td.find('.badge-label').length) {
-                        cell = $td.find('.badge-label').data('label-value') || '';
-                    } else {
-                        var cellHtml = $td.html() || '';
-                        cell = cellHtml
-                            .replace(/<br\s*\/?>/gi, '\n')
-                            .replace(/<[^>]+>/g, '')
-                            .replace(/\s+/g, ' ')
-                            .trim();
-                    }
-
-                    row_data.push(cell);
-                });
-
-                ws_data.push(row_data);
-            });
-
-            table.columns().every(function(idx) {
-                this.visible(columnVisibility[idx], false);
-            });
-            table.draw(false);
-
-            var wb = XLSX.utils.book_new();
-            var ws = XLSX.utils.aoa_to_sheet(ws_data);
-            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-
-            var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-            var blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-
-            var formData = new FormData(); formData.append('file', blob, filename);
-            const urlParams = new URLSearchParams(window.location.search);
-            formData.append('TM', urlParams.get('TM') || '');
-            formData.append('topics', urlParams.get('topics') || '');
-            formData.append('start', document.getElementById("rangeSelector").value);
-
-            fetch('/update_results', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (response.ok) return response.blob(); 
-                return response.json().then(err => { throw new Error(err.message || 'Error in backend') });
-            })
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);            
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                
-                a.download = 'mind_results_updated.xlsx';             
-                document.body.appendChild(a);
-                a.click();
-                
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);            
-            })
-            .catch(err => {
-                console.error("Error downloading XLSX:", err);
-            })
-            .finally(() => {
-                selector.style.pointerEvents = 'auto';
-                selector.style.opacity = '1';
-                selector.classList.remove('disabled');
-                selector.innerHTML = originalHTML;
-            });
-        }
-        catch (e) {
-            selector.style.pointerEvents = 'auto';
-            selector.style.opacity = '1';
-            selector.classList.remove('disabled');
-            selector.innerHTML = originalHTML;
-        }
-    }
-});
-</script>
-
 {% elif topic_keys %}
-<ul class="nav nav-pills mb-4 d-flex justify-content-between w-100" id="myTab" role="tablist">
-    <!-- Config Pipeline MIND -->
-    <li class="nav-item d-flex align-items-center">
-        <a class="nav-link active" style="cursor: pointer;" data-toggle="modal" data-target="#configPipelineModalLabel" data-no-warning>
-            Config Pipeline MIND
-        </a>
-    </li>
+<div
+    class="d-flex flex-wrap align-items-center justify-content-between p-3 mb-4 bg-body-tertiary rounded-3 shadow-sm gap-3">
 
-    <!-- Run Pipeline MIND -->
-    <li class="nav-item d-flex align-items-center">
-        <!-- Max input = ntopics -->
-        <label for="numberInput" class="mr-2 mb-0">Sample Size: </label>
-        <input type="number" class="form-control mr-2" id="sampleSizeInput" name="n_samples" placeholder="1" value="5" min="1" style="width: 100px;">
-        <a class="nav-link mode-selectors active" id="analyze_contradictions" style="cursor: pointer;" data-toggle="tab" data-no-warning>Analyze Discrepancies</a>
-        <a class="nav-link active" style="margin-left: 10px; cursor: pointer;" data-toggle="modal" data-target="#logModal" data-no-warning>
-            Check Status
-        </a>
-    </li>
-</ul>
+    <!-- Config Pipeline Trigger -->
+    <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2" data-bs-toggle="modal"
+        data-bs-target="#configPipelineModalLabel" data-no-warning>
+        <i class="ph ph-gear"></i>
+        <span>Configure Pipeline</span>
+    </button>
+
+    <!-- Run Pipeline Controls -->
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <div class="input-group" style="max-width: 260px;">
+            <span class="input-group-text bg-body-secondary border-secondary-subtle">Sample Size</span>
+            <input type="number" class="form-control border-secondary-subtle" id="sampleSizeInput" name="n_samples"
+                placeholder="5" value="5" min="1" style="max-width: 80px;">
+            <button type="button" class="btn btn-outline-secondary border-secondary-subtle" id="sampleAllBtn"
+                title="Use all available samples" data-no-warning>All</button>
+        </div>
+
+        <button class="btn btn-primary d-flex align-items-center gap-2 mode-selectors" id="analyze_contradictions"
+            data-bs-toggle="tab" data-no-warning>
+            <i class="ph ph-play"></i>
+            <span>Analyze Discrepancies</span>
+        </button>
+
+        <button class="btn btn-outline-info d-flex align-items-center gap-2" data-bs-toggle="modal"
+            data-bs-target="#logModal" data-no-warning>
+            <i class="ph ph-terminal-window"></i>
+            <span>Check Status</span>
+        </button>
+    </div>
+</div>
 
 <!-- Configuration Div Pipeline MIND -->
-<div class="modal fade" id="configPipelineModalLabel" tabindex="-1" role="dialog" aria-labelledby="configPipelineModalLabel" aria-hidden="true">
+<div class="modal fade" id="configPipelineModalLabel" tabindex="-1" role="dialog"
+    aria-labelledby="configPipelineModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable" role="document">
         <div class="modal-content p-3">
             <div class="modal-header">
                 <h5 class="modal-title" id="configPipelineModalLabel">Configuration Pipeline MIND</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p class="mb-3">Configure the following values to analyze discrepancies:</p>
 
                 <hr>
 
-                <div class="form-group mb-3 d-flex align-items-center">
-                    <label for="llmSelect_type" class="me-2" style="width: 200px;">Type of LLM:</label>
-                    <select id="llmSelect_type" class="form-control flex-grow-1">
-                        <option value="ollama" selected>ollama</option>
+                <div class="mb-4 d-flex align-items-center">
+                    <label for="llmSelect_type" class="me-3 fw-semibold fs-6" style="width: 200px;">Type of LLM:</label>
+                    <select id="llmSelect_type" class="form-select form-select-lg flex-grow-1 shadow-sm"
+                        style="cursor: pointer;">
+                        <option value="gemini" selected>Gemini (default)</option>
+                        <option value="ollama">Ollama</option>
                         <option value="GPT">GPT</option>
                     </select>
                 </div>
 
-                <div id="llmSelect_ollama" class="form-group mb-3 d-flex align-items-center">
-                    <label for="llmSelect_ollama_input" class="me-2" style="width: 200px;">Ollama LLM:</label>
-                    <select id="llmSelect_ollama_input" class="form-control flex-grow-1">
-                        
-                    </select>
-                </div>
-
-                <div id="server_ollama" class="form-group mb-3 d-flex align-items-center">
-                    <label for="server_ollama_input" class="me-2" style="width: 200px;">Ollama Server:</label>
-                    <select id="server_ollama_input" class="form-control flex-grow-1" disabled>
-                        {% for server in avaible_models.keys() %}
-                            {% if server == "yiyuan" %}
-                                <option value="{{ server }}" selected>{{ server }}</option>
-                            {% else %}
-                                <option value="{{ server }}">{{ server }}</option>
-                            {% endif %}
+                <div id="llmSelect_gemini" class="mb-4 d-flex align-items-center">
+                    <label for="llmSelect_gemini_input" class="me-3 fw-semibold fs-6" style="width: 200px;">Gemini
+                        Model:</label>
+                    <select id="llmSelect_gemini_input" class="form-select form-select-lg flex-grow-1 shadow-sm"
+                        style="cursor: pointer;">
+                        {% for model in avaible_models.get('gemini', ['gemini-2.5-flash']) %}
+                        <option value="{{ model }}" {% if model=='gemini-2.5-flash' %}selected{% endif %}>{{ model }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <script>
-                const availableModels = {{ avaible_models | tojson }};
-                const serverSelect = document.getElementById("server_ollama_input");
-                const modelSelect = document.getElementById("llmSelect_ollama_input");
+                <div id="llmSelect_ollama" class="mb-4 d-flex align-items-center" style="display:none;">
+                    <label for="llmSelect_ollama_input" class="me-3 fw-semibold fs-6" style="width: 200px;">Ollama
+                        LLM:</label>
+                    <select id="llmSelect_ollama_input" class="form-select form-select-lg flex-grow-1 shadow-sm"
+                        style="cursor: pointer;">
 
-                function updateModels() {
-                    const selectedServer = serverSelect.value;
-                    const models = availableModels[selectedServer] || [];
+                    </select>
+                </div>
 
-                    modelSelect.innerHTML = "";
+                <div id="server_ollama" class="mb-4 d-flex align-items-center" style="display:none;">
+                    <label for="server_ollama_input" class="me-3 fw-semibold fs-6" style="width: 200px;">Ollama
+                        Server:</label>
+                    <select id="server_ollama_input" class="form-select form-select-lg flex-grow-1 shadow-sm"
+                        style="cursor: pointer;">
+                        {% for server in avaible_models.keys() %}
+                        {% if server != "gemini" %}
+                        <option value="{{ server }}">{{ server }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
 
-                    models.forEach(model => {
-                        const option = document.createElement("option");
-                        option.value = model;
-                        option.textContent = model;
-                        modelSelect.appendChild(option);
-                    });
-                }
-                serverSelect.addEventListener("change", updateModels);
-                updateModels();
-                </script>
 
-                <div id="llmSelect_gpt" class="form-group mb-3 d-flex align-items-center" style="display: none;">
-                    <label for="llmSelect_gpt_input" class="me-2" style="width: 200px;">GPT LLM:</label>
-                    <select id="llmSelect_gpt_input" class="form-control flex-grow-1">
+                <div id="llmSelect_gpt" class="mb-4 d-flex align-items-center" style="display: none;">
+                    <label for="llmSelect_gpt_input" class="me-3 fw-semibold fs-6" style="width: 200px;">GPT
+                        LLM:</label>
+                    <select id="llmSelect_gpt_input" class="form-select form-select-lg flex-grow-1 shadow-sm"
+                        style="cursor: pointer;">
                         <option value="gpt-4-turbo">gpt-4-turbo</option>
-                        <option value="gpt-4"selected>gpt-4</option>
+                        <option value="gpt-4" selected>gpt-4</option>
                         <option value="gpt-4o-mini">gpt-4o-mini</option>
                         <option value="gpt-4o">gpt-4o</option>
                     </select>
                 </div>
 
-                <div id="gptApiKey" class="form-group mb-3 d-flex align-items-center" style="display: none;">
-                    <label for="llmSelect_gpt" class="me-2" style="width: 200px;">GPT API Key:</label>
-                    <input id="gptApiKeyInput" class="form-control flex-grow-1" value="" type="password" autocomplete="new-password" placeholder="sk-*******-*******-******"></input>
+                <div id="gptApiKey" class="mb-4 d-flex align-items-center" style="display: none;">
+                    <label for="llmSelect_gpt" class="me-3 fw-semibold fs-6" style="width: 200px;">GPT API Key:</label>
+                    <input id="gptApiKeyInput" class="form-control form-control-lg flex-grow-1 shadow-sm" value=""
+                        type="password" autocomplete="new-password" placeholder="sk-*******-*******-******"></input>
                 </div>
 
                 <hr>
 
-                <div class="d-flex align-items-center mb-2">
-                    <label for="methodSelect"
-                        class="me-2"
-                        style="width: 200px; margin-bottom: 0;">
+                <div class="d-flex align-items-center mb-4">
+                    <label for="methodSelect" class="me-3 fw-semibold fs-6" style="width: 200px; margin-bottom: 0;">
                         Method:
                     </label>
-                    <select id="methodSelect" class="form-control flex-grow-1">
+                    <select id="methodSelect" class="form-select form-select-lg flex-grow-1 shadow-sm"
+                        style="cursor: pointer;">
                         <option value="ENN">ENN</option>
                         <option value="ANN">ANN</option>
                         <option value="TB-ENN" selected>TB-ENN</option>
@@ -1743,81 +564,68 @@ document.addEventListener('DOMContentLoaded', function() {
                     </select>
                 </div>
 
-                <div class="d-flex align-items-center">
-                    <label for="enableWeight"
-                        class="me-2"
-                        style="width: 200px; margin-bottom: 0;">
+                <div class="d-flex align-items-center mb-2">
+                    <label for="enableWeight" class="me-3 fw-semibold fs-6" style="width: 200px; margin-bottom: 0;">
                         Do Weighting:
                     </label>
-                    <div class="form-control d-flex align-items-center flex-grow-1"
-                        style="height: auto; border: none; padding-left: 0;">
-                        <input type="checkbox"
-                            id="enableWeight"
-                            checked
-                            style="width: 18px; height: 18px; cursor: pointer;">
+                    <div class="form-check form-switch d-flex align-items-center flex-grow-1 m-0 p-0"
+                        style="height: auto;">
+                        <input type="checkbox" class="form-check-input ms-0 mt-0 shadow-sm" id="enableWeight" checked
+                            style="width: 3rem; height: 1.5rem; cursor: pointer;">
                     </div>
                 </div>
+
+                <hr>
+
+                <!-- Category Selection -->
+                <h6 class="fw-semibold">Detection Categories <small class="text-muted">(max 5)</small></h6>
+                <p class="text-muted small mb-2">Select up to 5 categories to detect. At least 1 is required.</p>
+                <div id="categorySelectionGroup" style="max-height: 260px; overflow-y: auto; padding-right: 4px;">
+                    <div class="form-check mb-1">
+                        <input class="form-check-input category-checkbox" type="checkbox" value="CONTRADICTION"
+                            id="cat-contradiction" checked data-cat-type="default"
+                            data-cat-prompt="The answers directly contradict each other on factual claims.">
+                        <label class="form-check-label" for="cat-contradiction">CONTRADICTION</label>
+                    </div>
+                    <div class="form-check mb-1">
+                        <input class="form-check-input category-checkbox" type="checkbox" value="NO_DISCREPANCY"
+                            id="cat-no-discrepancy" checked data-cat-type="default"
+                            data-cat-prompt="Both answers convey the same information without conflict.">
+                        <label class="form-check-label" for="cat-no-discrepancy">NO_DISCREPANCY</label>
+                    </div>
+                    <div class="form-check mb-1">
+                        <input class="form-check-input category-checkbox" type="checkbox" value="NOT_ENOUGH_INFO"
+                            id="cat-not-enough-info" data-cat-type="default"
+                            data-cat-prompt="At least one answer lacks enough information to assess discrepancy.">
+                        <label class="form-check-label" for="cat-not-enough-info">NOT_ENOUGH_INFO</label>
+                    </div>
+                    <div class="form-check mb-1">
+                        <input class="form-check-input category-checkbox" type="checkbox" value="CULTURAL_DISCREPANCY"
+                            id="cat-cultural" data-cat-type="default"
+                            data-cat-prompt="The difference between the answers stems from cultural or regional variation rather than a factual error.">
+                        <label class="form-check-label" for="cat-cultural">CULTURAL_DISCREPANCY</label>
+                    </div>
+
+                    {% if user_categories %}
+                    <hr class="my-2">
+                    <p class="text-muted small mb-1">Custom categories:</p>
+                    {% for cat in user_categories %}
+                    <div class="form-check mb-1">
+                        <input class="form-check-input category-checkbox" type="checkbox" value="{{ cat.name }}"
+                            id="cat-custom-{{ cat.id }}" data-cat-type="custom"
+                            data-cat-prompt="{{ cat.prompt_instruction | forceescape }}"
+                            data-cat-examples='{{ cat.examples | forceescape if cat.examples else "[]" }}'>
+                        <label class="form-check-label" for="cat-custom-{{ cat.id }}">{{ cat.name }}</label>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                <div id="categoryWarning" class="text-danger small mt-1" style="display:none;"></div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const selectType = document.getElementById("llmSelect_type");
-    const ollamaDiv = document.getElementById("llmSelect_ollama");
-    const ollamaServer = document.getElementById("server_ollama");
-    const gptDiv = document.getElementById("llmSelect_gpt");
-    const gptApiKey = document.getElementById("gptApiKey");
-
-    function updateVisibility() {
-        const value = selectType.value;
-
-        if (value === "GPT") {
-            ollamaDiv.classList.remove("d-flex");
-            ollamaDiv.classList.add("d-none");
-
-            ollamaServer.classList.remove("d-flex");
-            ollamaServer.classList.add("d-none");
-
-            gptDiv.classList.add("d-flex");
-            gptDiv.classList.remove("d-none");
-
-            gptApiKey.classList.add("d-flex");
-            gptApiKey.classList.remove("d-none");
-        }
-        else if (value === "ollama") {
-            ollamaDiv.classList.add("d-flex");
-            ollamaDiv.classList.remove("d-none");
-
-            ollamaServer.classList.add("d-flex");
-            ollamaServer.classList.remove("d-none");
-
-            gptDiv.classList.remove("d-flex");
-            gptDiv.classList.add("d-none");
-            
-            gptApiKey.classList.remove("d-flex");
-            gptApiKey.classList.add("d-none");
-        }
-        else {
-            ollamaDiv.classList.remove("d-flex");
-            ollamaDiv.classList.add("d-none");
-
-            ollamaServer.classList.remove("d-flex");
-            ollamaServer.classList.add("d-none");
-
-            gptDiv.classList.remove("d-flex");
-            gptDiv.classList.add("d-none");
-            
-            gptApiKey.classList.remove("d-flex");
-            gptApiKey.classList.add("d-none");
-        }
-    }
-
-    updateVisibility();
-    selectType.addEventListener("change", updateVisibility);
-});
-</script>
 
 
 <!-- Status Pipeline MIND -->
@@ -1826,671 +634,79 @@ document.addEventListener("DOMContentLoaded", function () {
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="logModalLabel">Pipeline Log</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div id="logTerminal"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-$(document).ready(function() {
-    const terminal = $("#logTerminal");
-
-    $('#logModal').on('shown.bs.modal', function () {
-        terminal.scrollTop(terminal[0].scrollHeight);
-    });
-
-    const evtSource = new EventSource("/stream_detection");
-
-    evtSource.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        const logLine = data.log;
-
-        terminal.append(document.createTextNode(logLine + "\n"));
-        terminal.scrollTop(terminal[0].scrollHeight);
-    };
-
-    evtSource.onerror = function(err) {
-        console.error("SSE error:", err);
-    };
-});
-</script>
 {% endif %}
 
-<style>
-    .dataset-entry:hover {
-        background-color: #e2e2e2 !important;
-        transition: background-color 0.2s ease;
-    }
 
-    .dataset-entry:hover a {
-        color: #007bff; 
-        text-decoration: underline;
-    }
 
-    .jumbotron::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    .jumbotron::-webkit-scrollbar-thumb {
-        background-color: #ccc;
-        border-radius: 4px;
-    }
-    
-    .jumbotron::-webkit-scrollbar-thumb:hover {
-        background-color: #aaa;
-    }
 
-    .dataset-link {
-        color: #000 !important;
-        text-decoration: none;
-        transition: color 0.2s ease;
-    }
 
-    .dataset-entry:hover .dataset-link {
-        color: #007bff !important;
-        text-decoration: underline;
-    }
 
-    #topicDocs1 {
-        width: 100%;
-        height: 100%;
-        position: relative;
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-    #topicDocsContent1 {
-        height: 100%;
-        width: 100%;
-        padding: 0;
-        box-sizing: border-box;
-    }
 
-    #topicDocs2 {
-        width: 100%;
-        height: 100%;
-        position: relative;
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-    #topicDocsContent2 {
-        height: 100%;
-        width: 100%;
-        padding: 0;
-        box-sizing: border-box;
-    }
 
-    #paginationContainer1 {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0;
-    }
-    #paginationContainer1 button {
-        margin: 0;
-        padding: 5px 10px;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-        background-color: #f0f0f0;
-        cursor: pointer;
-        text-align: center;
-        flex: 0 0 auto;
-    }
-    #paginationContainer1 button.active {
-        background-color: #007bff;
-        color: white;
-        border-color: #007bff;
-    }
-    #paginationContainer1 button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    #paginationContainer1 span {
-        margin: 0 5px;
-        padding: 5px 0;
-    }
-
-    #paginationContainer2 {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0;
-    }
-    #paginationContainer2 button {
-        margin: 0;
-        padding: 5px 10px;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-        background-color: #f0f0f0;
-        cursor: pointer;
-        text-align: center;
-        flex: 0 0 auto;
-    }
-    #paginationContainer2 button.active {
-        background-color: #007bff;
-        color: white;
-        border-color: #007bff;
-    }
-    #paginationContainer2 button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    #paginationContainer2 span {
-        margin: 0 5px;
-        padding: 5px 0;
-    }
-
-    th.th-with-filter {
-        position: relative;
-        padding-right: 32px !important;
-        min-width: 240px;
-        max-width: 240px;
-        white-space: nowrap;
-    }
-
-    .filter-icon-btn {
-        position: absolute;
-        right: -20px;
-        top: 50%;
-        transform: translateY(-90%);
-        padding: 2px 6px;
-    }
-
-    .filter-checkbox {
-        margin-right: 6px;
-    }
-
-    .custom-select-container {
-        position: relative;
-        display: inline-block;
-        width: 240px;
-        height: 38px;
-    }
-
-    .final-label-select {
-        width: 100%;
-        height: 100%;
-        padding: 0.25em 0.75em;
-        font-size: 0.875rem;
-        font-weight: 500;
-        border-radius: 0.25rem;
-        border: none;
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        text-align: center;
-        cursor: pointer;
-        color: #fff;
-        background-clip: padding-box;
-    }
-
-    .custom-select-container .custom-arrow {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        pointer-events: none;
-        font-size: 0.9em;
-        color: inherit;
-    }
-
-    .badge-label {
-        display: inline-block;
-        padding: 0.25em 0.75em;
-        font-size: 0.875rem;
-        font-weight: 500;
-        border-radius: 0.25rem;
-        min-width: 240px;
-        text-align: center;
-        height: 38px;
-        line-height: 30px;
-    }
-
-    #resultsTable {
-        table-layout: fixed;
-        width: max-content;
-    }
-
-    td.truncated {
-        width: 250px;
-        max-height: 120px;
-        overflow: hidden;
-        white-space: normal;
-        word-wrap: break-word;
-    }
-
-    #resultsTable td {
-        width: 250px !important;
-        max-height: 120px !important;
-        overflow: hidden !important;
-        white-space: normal !important;
-        word-wrap: break-word !important;
-    }
-
-    #logTerminal {
-        background-color: #1e1e1e;
-        color: #00ff00;
-        font-family: monospace;
-        font-size: 0.85rem;
-        padding: 10px;
-        height: 300px;
-        overflow-y: auto;
-        border-radius: 5px;
-        white-space: pre-wrap;
-    }
-
-    .tooltip-topic {
-        position: absolute;
-        background: white;
-        padding: 8px;
-        border: 1px solid #aaa;
-        border-radius: 4px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.15s ease;
-        font-size: 14px;
-        z-index: 1000;
-    }
-
-    .exit-modal {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1050;
-        opacity: 0;
-        transform: scale(0.9);
-        transition: opacity 0.3s ease, transform 0.3s ease;
-    }
-
-    .exit-modal.show {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-    .exit-modal-dialog {
-        display: flex;
-        flex-direction: column;
-        max-width: 500px;
-        width: 90%;
-    }
-
-    .exit-modal-content {
-        border-radius: 8px;
-        background: white;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .exit-modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #ddd;
-    }
-
-    .exit-modal-body {
-        padding: 1rem 0;
-    }
-
-    .exit-modal-footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        padding-top: 0.5rem;
-        border-top: 1px solid #ddd;
-    }
-
-    .exit-modal-btn {
-        min-width: 100px;
-        padding: 0.375rem 0.75rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-
-    .exit-modal-btn-danger {
-        background-color: #dc3545;
-        color: white;
-    }
-
-    .exit-modal-btn-secondary {
-        background-color: #6c757d;
-        color: white;
-    }
-
-    .exit-modal-close {
-        background: none;
-        border: none;
-        font-size: 1.25rem;
-        cursor: pointer;
-    }
-
-    [data-label-value="CONTRADICTION"], .final-label-select option[value="CONTRADICTION"] { background-color: #dc3545; color: #fff; }
-    [data-label-value="CULTURAL_DISCREPANCY"], .final-label-select option[value="CULTURAL_DISCREPANCY"] { background-color: #ffc107; color: #212529; }
-    [data-label-value="NOT_ENOUGH_INFO"], .final-label-select option[value="NOT_ENOUGH_INFO"] { background-color: #17a2b8; color: #fff; }
-    [data-label-value="NO_DISCREPANCY"], .final-label-select option[value="NO_DISCREPANCY"] { background-color: #28a745; color: #fff; }
-</style>
-
+<!-- Data Bridge: server-side data for detection.js -->
+{% if docs_data_1 %}
+<script type="application/json" id="__data_docsData1">{{ docs_data_1 | tojson }}</script>{% endif %}
+{% if docs_data_2 %}
+<script type="application/json" id="__data_docsData2">{{ docs_data_2 | tojson }}</script>{% endif %}
+{% if topic_keys %}
+<script type="application/json" id="__data_topicKeys">{{ topic_keys | tojson }}</script>{% endif %}
+{% if columns_json %}
+<script type="application/json" id="__data_columnsJson">{{ columns_json | safe }}</script>{% endif %}
+{% if result_columns %}
+<script type="application/json" id="__data_resultColumns">{{ result_columns | tojson }}</script>{% endif %}
+{% if non_orderable_indices %}
+<script type="application/json" id="__data_nonOrderableIndices">{{ non_orderable_indices | safe }}</script>{% endif %}
+{% if avaible_models %}
+<script type="application/json" id="__data_availableModels">{{ avaible_models | tojson }}</script>{% endif %}
+{% if unique_labels %}
+<script type="application/json" id="__data_uniqueLabels">{{ unique_labels | tojson }}</script>{% endif %}
+{% if user_categories %}
+<script type="application/json" id="__data_userCategories">{{ user_categories | tojson }}</script>{% endif %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.topic-checkbox').forEach(function(checkbox) {
-        checkbox.addEventListener('click', function(event) {
-            event.stopPropagation();
-        });
-    });
-    
-    document.querySelectorAll('.dataset-header').forEach(function(header){
-        header.addEventListener('click', function(){
-            var contentId = header.getAttribute('aria-controls');
-            var content = document.getElementById(contentId);
-            if (!content) return;
-
-            var expanded = header.getAttribute('aria-expanded') === 'true';
-            if (expanded) {
-                content.style.display = 'none';
-                header.setAttribute('aria-expanded', 'false');
-                var chev = header.querySelector('.chev');
-                if (chev) chev.style.transform = '';
-            } else {
-                content.style.display = 'block';
-                header.setAttribute('aria-expanded', 'true');
-                var chev = header.querySelector('.chev');
-                if (chev) chev.style.transform = 'rotate(90deg)';
-            }
-        });
-    });
-});
+    function __readData(id) {
+        var el = document.getElementById(id);
+        if (!el) return undefined;
+        try { return JSON.parse(el.textContent); } catch (e) { console.warn('Data parse error for ' + id, e); return undefined; }
+    }
+    window.__DETECTION_DATA = {
+        docsData1: __readData('__data_docsData1'),
+        docsData2: __readData('__data_docsData2'),
+        topicKeys: __readData('__data_topicKeys'),
+        columnsJson: __readData('__data_columnsJson'),
+        resultColumns: __readData('__data_resultColumns'),
+        nonOrderableIndices: __readData('__data_nonOrderableIndices'),
+        availableModels: __readData('__data_availableModels'),
+        uniqueLabels: __readData('__data_uniqueLabels'),
+        userCategories: __readData('__data_userCategories'),
+        {% if csrf_token %} csrfToken: "{{ csrf_token }}", {% endif %}
+    };
 </script>
 
-<script>
-let originalHTML = '';
-function startPipelinePolling(TM, topics) {
-    const selector = document.querySelector(`#analyze_contradictions`);
-    const interval = setInterval(() => {
-        fetch(`/pipeline_status?TM=${encodeURIComponent(TM)}&topics=${encodeURIComponent(topics)}`)
-            .then(res => res.json())
-            .then(data => {
-                console.log(data);
-                if (data.status === 'finished') {
-                    clearInterval(interval);
-                    shouldWarn = false;
-
-                    window.location.href = `/detection_results?TM=${encodeURIComponent(TM)}&topics=${encodeURIComponent(topics)}`;
-                } else if (data.status === 'error') {
-                    clearInterval(interval);
-
-                    selector.style.pointerEvents = 'auto';
-                    selector.style.opacity = '1';
-                    selector.classList.remove('disabled');
-                    selector.innerHTML = originalHTML;
-                    shouldWarn = false;
-                }
-            })
-            .catch(err => {
-                console.error("Error checking pipeline status:", err);
-                clearInterval(interval);
-            });
-    }, 2000);
-}
-
-class MINDInterface {
-    constructor() {
-        this.datasetItems = document.querySelectorAll('.dataset-item');
-        this.modeSelectors = document.querySelectorAll('.mode-selectors');
-        this.form = document.getElementById('mind-number-form');
-        this.numberInput = document.getElementById('numberInput');
-        this.topicButtons = document.querySelectorAll('.topic_button') ?? [];
-        this.listViewBtn = document.getElementById('list-view-btn');
-        this.graphViewBtn = document.getElementById('graph-view-btn');
-
-        this.initEventListeners();
-    }
-
-    initEventListeners() {
-        // Dataset selection
-        this.datasetItems.forEach(item => {
-            item.addEventListener('click', () => {
-                const datasetName = item.getAttribute("dataset-tm");
-                this.handleDatasetSelection(datasetName);
-            });
-        });
-
-        // Form submission
-        if (this.form) {
-            this.form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const value = parseInt(this.numberInput.value, 10);
-                if (!isNaN(value)) {
-                    this.handleSubmitNumber(value);
-                }
-            });
-        }
-
-        // Mode selectors
-        this.modeSelectors.forEach(selector => {
-            selector.addEventListener('click', (e) => {
-                e.preventDefault();
-                const instruction = 'Analyze contradictions';
-                let selected = []
-                console.log(window.currentView)
-
-                if (window.currentView === "visual") {
-                    selected = window.currentVisibleTopics
-                }
-
-                else if (window.currentView === "text") {
-                    const checkboxes = document.querySelectorAll('.topic-checkbox');
-        
-                    selected = Array.from(checkboxes)
-                        .filter(cb => cb.checked)
-                        .map(cb => cb.value);
-                }
-                else {
-                    alert("Choose Topics in Option Visual or Text.");
-                    return;
-                }
-
-                if (selected.length < 1) {
-                    alert('Select at least 1 topic.');
-                    return;
-                }
-
-                const sampleSizeInput = document.getElementById('sampleSizeInput').value
-
-                if (sampleSizeInput < 1) {
-                    alert('Sample Size must be greater than 0.');
-                    return;
-                }
-                
-                const topics = selected.join(',');
-                const TM = document.getElementById('TopicModel-h3').getAttribute("TM-name");
-                
-                const llm_type = document.getElementById('llmSelect_type').value;
-                let llm_model = "";
-                let gpt_api = "";
-                let ollama_server = "";
-                if (llm_type == "ollama") {
-                    llm_model = document.getElementById("llmSelect_ollama_input").value;
-                    ollama_server = document.getElementById('server_ollama_input').value;
-
-                    if (!llm_model || !ollama_server) {
-                        alert('Select an ollama LLM and kumo server.');
-                        return;
-                    }
-                }
-                else if (llm_type == "GPT") {
-                    llm_model = document.getElementById("llmSelect_gpt_input").value;
-                    gpt_api = document.getElementById("gptApiKeyInput").value;
-
-                    if (!gpt_api || !llm_model) {
-                        alert('Select a GPT LLM and indicate your API Key.');
-                        return;
-                    }
-                }
-                else {
-                    alert('Select GPT or ollama.');
-                    return;
-                }
-
-                const config = {
-                    "llm_type": llm_type,
-                    "llm": llm_model,
-                    "gpt_api": gpt_api,
-                    "ollama_server": ollama_server,
-                    "method": document.getElementById("methodSelect").value,
-                    "do_weighting": document.getElementById("enableWeight").checked ? true : false
-                };
-                this.handleInstruction(instruction, topics, TM, sampleSizeInput, config)
-            });
-        });
-    }
-
-    getCSRFToken() {
-        const cookieValue = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrf_token='))
-            ?.split('=')[1];
-        return cookieValue || '';
-    }
-
-    handleDatasetSelection(datasetName) {
-        console.log("Selected option:\n", datasetName);
-        showOverlay();
-
-        fetch('/detection_topickeys', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': this.getCSRFToken?.() || ''
-            },
-            body: JSON.stringify(datasetName)
-        })
-        .then(res => {
-            if (!res.ok) {
-                hideOverlay();
-                throw new Error("Backend error");
-            }
-            return res.json();
-        })
-        .then(data => {
-            window.location.href = data.redirect;
-        })
-        .catch(err => {
-            hideOverlay();
-            console.error("Dataset selection error:", err);
-        });
-    }
-
-    handleInstruction(instruction, topics, TM, sample_size, config) {
-        console.log("Selected instruction:", instruction);
-        const data = { "instruction": instruction, "topics": topics, "TM": TM, "sample_size": sample_size, "config": config };
-        console.log(data);
-        const selector = document.querySelector(`#analyze_contradictions`);
-        if (!selector) {
-            console.error("Selector not found!");
-            return;
-        }
-
-        selector.style.pointerEvents = 'none';
-        selector.style.opacity = '0.6';
-        selector.classList.add('disabled');
-
-        originalHTML = selector.innerHTML;
-        selector.innerHTML = `
-            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-            Waiting...
-        `;
-
-        $("#logTerminal").empty();
-
-        console.log(data);
-        shouldWarn = true;
-        fetch('/mode_selection', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': this.getCSRFToken() 
-            },
-            body: JSON.stringify(data)
-        })
-        .then(res => {
-            if (res.ok) {
-                startPipelinePolling(TM, topics);
-            } else {
-                shouldWarn = false;
-                selector.style.pointerEvents = 'auto';
-                selector.style.opacity = '1';
-                selector.classList.remove('disabled');
-                selector.innerHTML = originalHTML;
-            }
-        })
-        .catch(err => {
-            console.error("Dataset selection error:", err);
-            shouldWarn = false;
-            selector.style.pointerEvents = 'auto';
-            selector.style.opacity = '1';
-            selector.classList.remove('disabled');
-            selector.innerHTML = originalHTML;
-        });
-    }
-}
-
-// Create class MIND
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("MINDInterface initialized");
-    const mindInterface = new MINDInterface();    
-});
-</script>
-
-{% if csrf_token %}
-<script>
-    document.cookie = "csrf_token={{ csrf_token }}";
-</script>
+<!-- External CDN dependencies -->
+{% if docs_data_1 or docs_data_2 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endif %}
+{% if topic_keys %}
+<script src="https://d3js.org/d3.v7.min.js"></script>
+{% endif %}
+{% if result_mind and result_columns %}
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 {% endif %}
 
-<style>
-.hover-text-primary:hover {
-    color: #007bff;
-    cursor: pointer;
-}
-</style>
+<!-- Detection Page JS -->
+<script src="{{ url_for('static', filename='js/detection.js') }}"></script>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const modal = $('#docModal');
-    const modalTitle = modal.find('.modal-title');
-    const modalBody = modal.find('.modal-body');
-
-    document.querySelectorAll('.view-doc-link').forEach(link => {
-        link.addEventListener('click', function (e) {
-            e.preventDefault();
-
-            const docId = this.getAttribute('data-doc-id');
-            const docContent = this.getAttribute('data-doc-content');
-
-            modalTitle.text(`Document ${docId}`);
-            modalBody.html(`<pre style="white-space: pre-wrap;">${docContent}</pre>`);
-
-            modal.modal('show');
-        });
-    });
-});
-</script>
 
 {% endblock %}

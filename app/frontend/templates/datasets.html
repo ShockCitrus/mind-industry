@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Datasets{% endblock %}
 
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mt-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/"><i class="ph ph-house me-1"></i>Home</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Datasets</li>
+    </ol>
+</nav>
+{% endblock %}
+
 {% block content %}
 <h1 class="mt-4">Datasets</h1>
 <p>Check below the datasets available for use.</p>
@@ -9,76 +18,148 @@
 
 {% set combined_data = zip(datasets, names, shape, stages) %}
 {% for group in combined_data | groupby(3) %}
-    {% if group.grouper != 4 %}
-    <hr>
-    <h2 class="mt-4">
-        {% if group.grouper == 1 %}
-            1. Raw Data
-        {% elif group.grouper == 2 %}
-            2. Preprocessed Data
-        {% elif group.grouper == 3 %}
-            3. Topic Models
-        {% else %}
-            Datasets - Unknown {{ group.grouper }}
-        {% endif %}
-    </h2>
-
-    <div id="accordion-stage-{{ group.grouper }}" class="mt-4">
-        {% for item in group.list %}
-            {% set ds = item[0] %}
-            {% set name = item[1] %}
-            {% set shape_tuple = item[2] %}
-            {% set unique_id_base = "stage-" ~ group.grouper ~ "-item-" ~ loop.index %}
-
-            <div class="card">
-                <div class="card-header" id="heading-{{ unique_id_base }}">
-                    <h5 class="mb-0">
-                        <button class="btn btn-link collapsed" data-toggle="collapse"
-                                data-target="#collapse-{{ unique_id_base }}"
-                                aria-expanded="false" aria-controls="collapse-{{ unique_id_base }}">
-                            {{ name }}
-                        </button>
-                    </h5>
-                </div>
-
-                {% if group.grouper != 3 %}
-                <div id="collapse-{{ unique_id_base }}" class="collapse" 
-                     aria-labelledby="heading-{{ unique_id_base }}"
-                     data-parent="#accordion-stage-{{ group.grouper }}">
-                    <div class="card-body">
-
-                        <p><strong>Shape:</strong> {{ shape_tuple[0] }} rows × {{ shape_tuple[1] }} columns</p>
-
-                        <div class="table-responsive">
-                            <table class="table table-sm table-striped table-bordered">
-                                <thead class="thead-light">
-                                    <tr>
-                                        {% for col in ds[0] %}
-                                            <th>{{ col }}</th>
-                                        {% endfor %}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for row in ds[:5] %}
-                                    <tr>
-                                        {% for cell in row.values() %}
-                                            <td>{{ cell }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        {% endfor %}
-    </div>
-    <br>
+{% if group.grouper != 4 %}
+<hr>
+<h2 class="mt-4">
+    {% if group.grouper == 1 %}
+    1. Raw Data
+    {% elif group.grouper == 2 %}
+    2. Preprocessed Data
+    {% elif group.grouper == 3 %}
+    3. Topic Models
+    {% else %}
+    Datasets - Unknown {{ group.grouper }}
     {% endif %}
+</h2>
+
+<div id="accordion-stage-{{ group.grouper }}" class="mt-4">
+    {% for item in group.list %}
+    {% set ds = item[0] %}
+    {% set name = item[1] %}
+    {% set shape_tuple = item[2] %}
+    {% set unique_id_base = "stage-" ~ group.grouper ~ "-item-" ~ loop.index %}
+
+    <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between" id="heading-{{ unique_id_base }}">
+            <h5 class="mb-0">
+                <button class="btn btn-link collapsed" data-bs-toggle="collapse"
+                    data-bs-target="#collapse-{{ unique_id_base }}" aria-expanded="false"
+                    aria-controls="collapse-{{ unique_id_base }}">
+                    {{ name }}
+                </button>
+            </h5>
+            <button class="btn btn-outline-danger btn-delete-dataset d-flex align-items-center gap-1"
+                    data-dataset="{{ name }}" data-stage="{{ group.grouper }}"
+                    data-card-id="{{ unique_id_base }}"
+                    title="Delete this dataset"
+                    style="padding: 6px 14px; font-size: 0.9rem;">
+                <i class="ph ph-trash" style="font-size: 1.1rem;"></i> Delete
+            </button>
+        </div>
+
+        {% if group.grouper != 3 %}
+        <div id="collapse-{{ unique_id_base }}" class="collapse" aria-labelledby="heading-{{ unique_id_base }}"
+            data-bs-parent="#accordion-stage-{{ group.grouper }}">
+            <div class="card-body">
+
+                <p><strong>Shape:</strong> {{ shape_tuple[0] }} rows × {{ shape_tuple[1] }} columns</p>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                {% for col in ds[0] %}
+                                <th>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in ds[:5] %}
+                            <tr>
+                                {% for cell in row.values() %}
+                                <td>{{ cell }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+<br>
+{% endif %}
 {% endfor %}
+
+<!-- Delete Dataset Confirmation Modal -->
+<div class="modal fade" id="deleteDatasetModal" tabindex="-1" aria-labelledby="deleteDatasetModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteDatasetModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the dataset <strong id="deleteDatasetName"></strong>?</p>
+                <p class="text-danger"><small>This action cannot be undone.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteDatasetBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteDatasetModal'));
+    let pendingDelete = null;
+
+    document.querySelectorAll('.btn-delete-dataset').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            pendingDelete = {
+                dataset: this.dataset.dataset,
+                stage: this.dataset.stage,
+                cardId: this.dataset.cardId
+            };
+            document.getElementById('deleteDatasetName').textContent = pendingDelete.dataset;
+            deleteModal.show();
+        });
+    });
+
+    document.getElementById('confirmDeleteDatasetBtn').addEventListener('click', function () {
+        if (!pendingDelete) return;
+        const { dataset, stage, cardId } = pendingDelete;
+
+        fetch(`/delete_dataset?stage=${encodeURIComponent(stage)}&dataset_name=${encodeURIComponent(dataset)}`, {
+            method: 'DELETE'
+        })
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+            deleteModal.hide();
+            if (ok) {
+                showToast(data.message || 'Dataset deleted.', 'success');
+                const card = document.getElementById('heading-' + cardId);
+                if (card && card.closest('.card')) card.closest('.card').remove();
+            } else {
+                showToast(data.error || 'Failed to delete dataset.', 'danger');
+            }
+            pendingDelete = null;
+        })
+        .catch(() => {
+            deleteModal.hide();
+            showToast('Request failed.', 'danger');
+            pendingDelete = null;
+        });
+    });
+});
+</script>
 
 {% else %}
 <p>No datasets available.</p>

@@ -9,8 +9,13 @@ df = pd.read_csv("fever_transformed.csv")
 INSTRUCTIONS_PATH = "templates/transform_fever.txt"
 _4_INSTRUCTIONS_PATH = "templates/discrepancy_detection.txt"
 
-prompter = Prompter(
-    model_type="llama3:70b-instruct", ollama_host="http://kumo01.tsc.uc3m.es:11434")
+# NOTE: model and host are read from config/config.yaml (llm.default section).
+# To switch backends, update 'llm.default.backend' and 'llm.default.model'.
+# To use a specific Ollama model, pass model_type and ensure its server is
+# listed in llm.ollama.servers in config.yaml.
+promopter = Prompter(
+    model_type="llama3:70b-instruct")
+
 
 def parse_text(text):
     # Split on the first double newline

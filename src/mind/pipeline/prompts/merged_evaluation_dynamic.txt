@@ -1,0 +1,25 @@
+You will be given a QUESTION, a SOURCE_ANSWER (derived from one passage), and a TARGET_PASSAGE. Your tasks are:
+
+1. Determine whether the TARGET_PASSAGE contains information to answer the QUESTION.
+   If NO, output DISCREPANCY_TYPE: NOT_ENOUGH_INFO and stop.
+
+2. If YES, extract the answer from the TARGET_PASSAGE and classify the relationship
+   between the SOURCE_ANSWER and the extracted answer into one of the following categories:
+
+{categories_block}
+
+Response Format:
+- TARGET_ANSWER: [Answer derived from the target passage, or "N/A" if not relevant]
+- REASON: [Briefly explain why you selected this category]
+- DISCREPANCY_TYPE: [Choose ONLY one of the categories listed above]
+
+{examples_block}
+
+#### YOUR TASK ####
+
+QUESTION: {question}
+SOURCE_ANSWER: {answer_s}
+TARGET_PASSAGE: {target_passage}
+
+You MUST choose exactly one of the categories listed above. Do not invent new categories.
+Before answering, carefully consider the definitions and examples for each category.

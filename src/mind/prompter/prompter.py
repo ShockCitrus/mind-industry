@@ -8,26 +8,78 @@ from typing import List, Union
 from dotenv import load_dotenv
 from joblib import Memory # type: ignore
 import requests
+import concurrent.futures
 
 from ollama import Client # type: ignore
 from openai import OpenAI # type: ignore
 
+# Gemini imports with graceful fallback
+try:
+    from google import genai
+    from google.genai import types as genai_types
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+
 from colorama import Fore, Style
 
-from mind.utils.utils import init_logger, load_yaml_config_file
+from mind.utils.utils import init_logger, load_yaml_config_file, get_optimization_settings
 
-memory = Memory(location='../../../cache', verbose=0)
+# Determine project root (3 levels up from this file: src/mind/prompter -> src/mind -> src -> root)
+PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.parent
+CACHE_DIR = PROJECT_ROOT / "data" / "cache"
+memory = Memory(location=CACHE_DIR, verbose=0)
 
 def hash_input(*args):
     return hashlib.md5(str(args).encode()).hexdigest()
 
 class Prompter:
+    # -----------------------------------------------------------------------
+    # Helper
+    # -----------------------------------------------------------------------
+    @staticmethod
+    def _resolve_host(backend_cfg: dict, explicit_host: str = None) -> str:
+        """Resolve an LLM host URL from the backend config block.
+
+        Priority:
+          1. ``explicit_host`` argument (passed at runtime, e.g. from the web app)
+          2. ``servers[default_server]`` in the config block
+          3. Legacy ``host`` key (backward-compat, will be removed in a future version)
+
+        Raises
+        ------
+        ValueError
+            If no host can be resolved.
+        """
+        if explicit_host:
+            return explicit_host
+
+        servers = backend_cfg.get("servers", {})
+        default_server = backend_cfg.get("default_server")
+        if servers and default_server and default_server in servers:
+            return servers[default_server]
+        if servers:  # fallback: first server in map
+            return next(iter(servers.values()))
+
+        # Legacy single-host key (deprecated)
+        legacy = backend_cfg.get("host")
+        if legacy:
+            return legacy
+
+        raise ValueError(
+            "No host configured. Add a 'servers' map and 'default_server' to "
+            "the relevant backend section in config.yaml."
+        )
+
+    # Class-level client instances (initialized on first use)
+    ollama_client = None
+    gemini_client = None
     def __init__(
         self,
         model_type: str,
         llm_server: str = None,
         logger: logging.Logger = None,
-        config_path: pathlib.Path = pathlib.Path("config/config.yaml"),
+        config_path: pathlib.Path = pathlib.Path("/src/config/config.yaml"),
         temperature: float = None,
         seed: int = None,
         max_tokens: int = None,
@@ -36,12 +88,31 @@ class Prompter:
         self._logger = logger if logger else init_logger(config_path, __name__)
         self.config = load_yaml_config_file(config_path, "llm", logger)
 
+        # Cost optimization: track total LLM API calls
+        self._call_count = 0
+
+        # Per-step call instrumentation (for detection cost profiling)
+        self._call_log = []          # List of {"step": str, "tokens_in": int, "tokens_out": int, "ts": float}
+        self._call_counts = {}       # {"step_name": count}
+        self._instrumentation = False
+        
+        # OPT-010: Load optimization settings for batched LLM calls
+        self._opt_settings = get_optimization_settings(str(config_path), self._logger)
+        self._batched_llm_calls = self._opt_settings.get("batched_llm_calls", False)
+        if self._batched_llm_calls:
+            self._logger.info("OPT-010: Batched LLM calls enabled")
+
         self.GPT_MODELS = self.config.get(
             "gpt", {}).get("available_models", {})
         self.OLLAMA_MODELS = self.config.get(
             "ollama", {}).get("available_models", {})
         self.VLLM_MODELS = self.config.get(
             "vllm", {}).get("available_models", {})
+        self.GEMINI_MODELS = self.config.get(
+            "gemini", {}).get("available_models", [])
+        # Convert to set for consistent lookup
+        if isinstance(self.GEMINI_MODELS, list):
+            self.GEMINI_MODELS = set(self.GEMINI_MODELS)
 
         self.model_type = model_type
         self.context = None
@@ -66,6 +137,9 @@ class Prompter:
             elif model_type in self.OLLAMA_MODELS:
                 self.params["num_predict"] = max_tokens
                 self._logger.info(f"Setting num_predict to: {max_tokens}")
+            elif model_type in self.GEMINI_MODELS:
+                self.params["max_output_tokens"] = max_tokens
+                self._logger.info(f"Setting max_output_tokens to: {max_tokens}")
             else:
                 raise ValueError("Unsupported model_type specified.")
 
@@ -83,58 +157,108 @@ class Prompter:
                     raise ValueError("OpenAI API key not found. Please set it in the .env file or pass it as an argument.")
             
         elif model_type in self.OLLAMA_MODELS:
-            load_dotenv(self.config.get("yiyuan", {}).get("path_api_key", ".env"))
-            yiyuan_key = os.getenv("YIYUAN_API_KEY")
-            if yiyuan_key is None:
-                ollama_host = llm_server or self.config.get("ollama", {}).get(
-                    "host", "http://kumo01.tsc.uc3m.es:11434"
-                )
-                self._logger.info(f"Using ollama host: {ollama_host}")
-                os.environ['OLLAMA_HOST'] = ollama_host
-                self.backend = "ollama"
-                # Initialize as class-level variable to be able to use it in the cache function
-                Prompter.ollama_client = Client(
-                    host=ollama_host,
-                    headers={'x-some-header': 'some-value'}
-                )
-                self._logger.info(
-                    f"Using OLLAMA API with host: {ollama_host}"
-                )
-            else:
-                yiyuan_host = llm_server or self.config.get("yiyuan", {}).get(
-                    "host", "https://yiyuan.tsc.uc3m.es/api/generate"
-                )
-                self.backend = "yiyuan"
-                self._logger.info(f"Using yiyuan host: {yiyuan_host}")
-                os.environ['OLLAMA_HOST'] = yiyuan_host
-                Prompter.ollama_client = Client(
-                    host=yiyuan_host,
-                    timeout=600.0,
-                    headers={'x-some-header': 'some-value', 'X-API-KEY': yiyuan_key}
-                )
-                self._logger.info(
-                    f"Using yiyuan API with host: {yiyuan_host}"
-                )
-
+            ollama_host = Prompter._resolve_host(
+                self.config.get("ollama", {}), explicit_host=llm_server
+            )
+            self._logger.info(f"Using ollama host: {ollama_host}")
+            os.environ['OLLAMA_HOST'] = ollama_host
+            self.backend = "ollama"
+            # Initialize as class-level variable to be able to use it in the cache function
+            Prompter.ollama_client = Client(
+                host=ollama_host,
+                headers={'x-some-header': 'some-value'}
+            )
         elif model_type in self.VLLM_MODELS:
-            vllm_host = llm_server or self.config.get("vllm", {}).get(
-                "host", "http://localhost:6000/v1"
+            vllm_host = Prompter._resolve_host(
+                self.config.get("vllm", {}), explicit_host=llm_server
             )
             os.environ['VLLM_HOST'] = vllm_host
             self.backend = "vllm"
-            self._logger.info(
-                f"Using VLLM API with host: {vllm_host}"
-            )
+            self._logger.info(f"Using VLLM API with host: {vllm_host}")
         elif model_type == "llama_cpp":
-            self.llama_cpp_host = llm_server or self.config.get("llama_cpp", {}).get(
-                "host", "http://kumo01:11435/v1/chat/completions"
+            self.llama_cpp_host = Prompter._resolve_host(
+                self.config.get("llama_cpp", {}), explicit_host=llm_server
             )
             self.backend = "llama_cpp"
-            self._logger.info(
-                f"Using llama_cpp API with host: {self.llama_cpp_host}"
-            )
+            self._logger.info(f"Using llama_cpp API with host: {self.llama_cpp_host}")
+        elif model_type in self.GEMINI_MODELS:
+            if not GEMINI_AVAILABLE:
+                raise ImportError(
+                    "google-genai package is required for Gemini models. "
+                    "Install with: pip install google-genai"
+                )
+            
+            load_dotenv(self.config.get("gemini", {}).get("path_api_key", ".env"))
+            gemini_api_key = os.getenv("GOOGLE_API_KEY")
+            
+            if gemini_api_key is None:
+                raise ValueError(
+                    "GOOGLE_API_KEY not found. Please set it in the .env file."
+                )
+            
+            # Check for Vertex AI configuration
+            vertex_project = self.config.get("gemini", {}).get("vertex_project")
+            vertex_location = self.config.get("gemini", {}).get("vertex_location")
+            
+            if vertex_project and vertex_location:
+                # Vertex AI endpoint
+                Prompter.gemini_client = genai.Client(
+                    vertexai=True,
+                    project=vertex_project,
+                    location=vertex_location,
+                )
+                self._logger.info(
+                    f"Using Vertex AI with project: {vertex_project}, location: {vertex_location}"
+                )
+            else:
+                # Google AI Studio endpoint (default)
+                Prompter.gemini_client = genai.Client(api_key=gemini_api_key)
+                self._logger.info(f"Using Google AI Studio with model: {model_type}")
+            
+            self.backend = "gemini"
         else:
-            raise ValueError("Unsupported model_type specified.")
+            raise ValueError(
+                f"Unsupported model_type '{model_type}'. "
+                "Check that it appears in the relevant backend's available_models list in config.yaml."
+            )
+
+    @classmethod
+    def from_config(
+        cls,
+        config_path: pathlib.Path = pathlib.Path("/src/config/config.yaml"),
+        llm_server: str = None,
+        logger: "logging.Logger" = None,
+        **kwargs,
+    ) -> "Prompter":
+        """Instantiate a Prompter using the ``llm.default`` block in config.
+
+        This factory reads ``llm.default.backend`` and ``llm.default.model``
+        from the config file so callers don't need to know the model name at
+        call-site — just update config.yaml to switch backends.
+
+        Example
+        -------
+        >>> p = Prompter.from_config(config_path='config/config.yaml')
+        """
+        from mind.utils.utils import load_yaml_config_file, init_logger
+        _logger = logger or init_logger(config_path, __name__)
+        cfg = load_yaml_config_file(config_path, "llm", _logger)
+        default = cfg.get("default", {})
+        backend = default.get("backend")
+        model = default.get("model")
+        if not backend or not model:
+            raise ValueError(
+                "'llm.default.backend' and 'llm.default.model' must be set in config.yaml "
+                "to use Prompter.from_config()."
+            )
+        _logger.info(f"Prompter.from_config(): using backend='{backend}', model='{model}'")
+        return cls(
+            model_type=model,
+            llm_server=llm_server,
+            logger=_logger,
+            config_path=config_path,
+            **kwargs,
+        )
 
     @staticmethod
     @memory.cache
@@ -173,13 +297,12 @@ class Prompter:
                 question=question,
                 params=dict(params),
             )
-        elif backend == "yiyuan":
-            result, logprobs, context = Prompter._call_yiyuan_api(
+        elif backend == "gemini":
+            result, logprobs = Prompter._call_gemini_api(
                 template=template,
                 question=question,
                 model_type=model_type,
                 params=dict(params),
-                context=context,
             )
         else:
             raise ValueError(f"Unsupported backend: {backend}")
@@ -267,7 +390,11 @@ class Prompter:
         return result, logprobs, context
 
     @staticmethod
-    def _call_llama_cpp_api(template, question, params, llama_cpp_host="http://kumo01:11435/v1/chat/completions"):
+    def _call_llama_cpp_api(template, question, params, llama_cpp_host: str = None):
+        if not llama_cpp_host:
+            raise ValueError(
+                "llama_cpp_host is required. Configure it via 'llm.llama_cpp.servers' in config.yaml."
+            )
         """Handles the llama_cpp API call."""
         payload = {
             "messages": [
@@ -289,35 +416,74 @@ class Prompter:
             raise RuntimeError(f"llama_cpp API error: {response_data.get('error', 'Unknown error')}")
 
         return result, logprobs
-    
+
     @staticmethod
-    def _call_yiyuan_api(template, question, params, model_type, context, yiyuan_host="https://yiyuan.tsc.uc3m.es/api/generate"):
-        """Handles the yiyuan API call."""
-
-        if Prompter.ollama_client is None:
-            raise ValueError("OLLAMA client is not initialized. Check the model type configuration.")
-
-        if template is not None:
-            response = Prompter.ollama_client.generate(
-                system=template,
-                prompt=question,
-                model=model_type,
-                stream=False,
-                options=params,
-                context=context,
+    def _call_gemini_api(template, question, model_type, params):
+        """Handles the Google Gemini API call.
+        
+        Parameters
+        ----------
+        template : str or None
+            The system prompt template.
+        question : str
+            The user question/content.
+        model_type : str
+            The Gemini model name (e.g., 'gemini-2.0-flash').
+        params : dict
+            Generation parameters.
+            
+        Returns
+        -------
+        tuple
+            (result_text, logprobs) where logprobs is always None for Gemini.
+        """
+        if Prompter.gemini_client is None:
+            raise ValueError(
+                "Gemini client is not initialized. Check the model type configuration."
             )
-        else:
-            response = Prompter.ollama_client.generate(
-                prompt=question,
-                model=model_type,
-                stream=False,
-                options=params,
-                context=context,
+        
+        try:
+            # Build generation config
+            gen_config = genai_types.GenerateContentConfig(
+                temperature=params.get("temperature", 0),
+                top_p=params.get("top_p", 0.1),
+                max_output_tokens=params.get("max_output_tokens", 1000),
             )
-        result = response["response"]
-        logprobs = None
-        context = response.get("context", None)
-        return result, logprobs, context
+            
+            # Add system instruction if template is provided
+            if template is not None:
+                gen_config.system_instruction = template
+            
+            # Make API call
+            response = Prompter.gemini_client.models.generate_content(
+                model=model_type,
+                contents=question,
+                config=gen_config,
+            )
+            
+            result = response.text
+            logprobs = None  # Gemini does not provide logprobs in the same format
+            
+            return result, logprobs
+            
+        except Exception as e:
+            # Handle Gemini-specific errors
+            error_msg = str(e)
+            
+            if "RESOURCE_EXHAUSTED" in error_msg or "429" in error_msg:
+                raise RuntimeError(
+                    f"Gemini rate limit exceeded. Consider reducing batch size. Error: {e}"
+                )
+            elif "PERMISSION_DENIED" in error_msg or "403" in error_msg:
+                raise RuntimeError(
+                    f"Gemini API key invalid or lacks permission. Check GOOGLE_API_KEY. Error: {e}"
+                )
+            elif "INVALID_ARGUMENT" in error_msg or "400" in error_msg:
+                raise RuntimeError(
+                    f"Invalid request to Gemini API. Check model name and parameters. Error: {e}"
+                )
+            else:
+                raise RuntimeError(f"Gemini API error: {e}")
 
     def prompt(
         self,
@@ -331,6 +497,9 @@ class Prompter:
 
         if dry_run:
             return "Dry run mode is ON — no LLM calls will be made.", None
+
+        # Cost optimization: count actual API calls
+        self._call_count += 1
         
         # Load the system prompt template
         system_prompt_template = None
@@ -368,3 +537,171 @@ class Prompter:
             print(f"{Fore.RED}this is what was kept:{Style.RESET_ALL} {result}")
 
         return result, logprobs
+
+    @property
+    def total_calls(self) -> int:
+        """Total number of LLM API calls made by this prompter instance."""
+        return self._call_count
+
+    # =========================================================================
+    # Call Instrumentation (detection cost profiling)
+    # =========================================================================
+
+    def enable_instrumentation(self):
+        """Enable per-step call counting and logging."""
+        self._instrumentation = True
+        self._call_log = []
+        self._call_counts = {}
+
+    def disable_instrumentation(self):
+        """Disable call counting."""
+        self._instrumentation = False
+
+    def log_call(self, step: str, tokens_in: int = 0, tokens_out: int = 0):
+        """Record a call under a named step."""
+        if not self._instrumentation:
+            return
+        import time
+        self._call_counts[step] = self._call_counts.get(step, 0) + 1
+        self._call_log.append({
+            "step": step,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "ts": time.time()
+        })
+
+    @property
+    def call_summary(self) -> dict:
+        """Return a summary of all instrumented calls."""
+        return {
+            "total_calls": len(self._call_log),
+            "calls_by_step": dict(self._call_counts),
+            "total_tokens_in": sum(c["tokens_in"] for c in self._call_log),
+            "total_tokens_out": sum(c["tokens_out"] for c in self._call_log),
+        }
+
+    def reset_instrumentation(self):
+        """Clear all recorded call data."""
+        self._call_log = []
+        self._call_counts = {}
+    
+    # =========================================================================
+    # OPT-010: Batched LLM Calls
+    # =========================================================================
+    
+    def prompt_batch(
+        self,
+        questions: List[str],
+        system_prompt_template_path: str = None,
+        temperature: float = None,
+        max_workers: int = 4,
+        dry_run: bool = False,
+    ) -> List[tuple]:
+        """
+        OPT-010: Execute multiple prompts concurrently for reduced latency.
+        
+        Parameters
+        ----------
+        questions : List[str]
+            List of questions to prompt.
+        system_prompt_template_path : str, optional
+            Path to system prompt template file.
+        temperature : float, optional
+            Override temperature for all prompts.
+        max_workers : int, optional
+            Maximum concurrent API calls. Default is 4.
+        dry_run : bool, optional
+            If True, skip actual API calls.
+            
+        Returns
+        -------
+        List[tuple]
+            List of (result, logprobs) tuples for each question.
+        """
+        if dry_run:
+            return [("Dry run mode is ON — no LLM calls will be made.", None) for _ in questions]
+        
+        if not questions:
+            return []
+        
+        self._logger.info(f"OPT-010: Batching {len(questions)} prompts with {max_workers} workers")
+        
+        def process_single(question: str):
+            """Process a single prompt."""
+            return self.prompt(
+                question=question,
+                system_prompt_template_path=system_prompt_template_path,
+                temperature=temperature,
+                dry_run=False,
+            )
+            
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all prompts in order
+            futures = [executor.submit(process_single, q) for q in questions]
+            
+            # Collect results in original order
+            for i, future in enumerate(futures):
+                question = questions[i]
+                try:
+                    result = future.result()
+                    results.append(result)
+                except Exception as e:
+                    self._logger.error(f"Prompt failed for question: {question[:50]}... Error: {e}")
+                    results.append((None, None))
+        
+        self._logger.info(f"OPT-010: Completed {len(results)} prompts")
+        return results
+    
+    def prompts_auto(
+        self,
+        questions: List[str],
+        system_prompt_template_path: str = None,
+        temperature: float = None,
+        max_workers: int = 4,
+        dry_run: bool = False,
+    ) -> List[tuple]:
+        """
+        OPT-010: Automatically choose between batched or sequential execution based on config.
+        
+        This is a convenience wrapper that checks the `batched_llm_calls` config flag
+        and routes to either `prompt_batch()` or sequential `prompt()` calls.
+        
+        Parameters
+        ----------
+        questions : List[str]
+            List of questions to prompt.
+        system_prompt_template_path : str, optional
+            Path to system prompt template file.
+        temperature : float, optional
+            Override temperature for all prompts.
+        max_workers : int, optional
+            Maximum concurrent API calls (only used if batching enabled).
+        dry_run : bool, optional
+            If True, skip actual API calls.
+            
+        Returns
+        -------
+        List[tuple]
+            List of (result, logprobs) tuples for each question.
+        """
+        if self._batched_llm_calls:
+            return self.prompt_batch(
+                questions=questions,
+                system_prompt_template_path=system_prompt_template_path,
+                temperature=temperature,
+                max_workers=max_workers,
+                dry_run=dry_run,
+            )
+        else:
+            # Sequential execution
+            results = []
+            for question in questions:
+                result = self.prompt(
+                    question=question,
+                    system_prompt_template_path=system_prompt_template_path,
+                    temperature=temperature,
+                    dry_run=dry_run,
+                )
+                results.append(result)
+            return results

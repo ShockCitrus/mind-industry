@@ -1,26 +1,64 @@
 {% extends "base.html" %}
-{% block title %}Sign-up{% endblock %}
-
+{% block title %}Sign Up{% endblock %}
 {% block content %}
-<h2 style="margin-top: -5px;">Sign Up</h2>
-<hr>
-<form method="POST" action="/sign-up">
-    <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" class="form-control" id="username" name="username" autocomplete="off" required>
+<div class="d-flex justify-content-center align-items-center" style="min-height: 60vh;">
+    <div class="card p-4 shadow" style="max-width: 420px; width: 100%;">
+        <h3 class="text-center mb-4"><i class="ph ph-user-plus me-2"></i>Sign Up</h3>
+        <form method="POST" id="signupForm" novalidate>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email Address</label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email"
+                    required>
+                <div class="invalid-feedback">Please enter a valid email address.</div>
+            </div>
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username"
+                    required minlength="3">
+                <div class="invalid-feedback">Username must be at least 3 characters long.</div>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password"
+                    placeholder="Create a password" required minlength="6">
+                <div class="invalid-feedback">Password must be at least 6 characters long.</div>
+            </div>
+            <div class="mb-3">
+                <label for="password_rep" class="form-label">Confirm Password</label>
+                <input type="password" class="form-control" id="password_rep" name="password_rep"
+                    placeholder="Confirm your password" required>
+                <div class="invalid-feedback">Passwords do not match.</div>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">Sign Up</button>
+            </div>
+        </form>
+        <script>
+            const signupForm = document.getElementById('signupForm');
+            const password = document.getElementById('password');
+            const passwordRep = document.getElementById('password_rep');
+
+            // Check password match on input
+            function checkPasswordMatch() {
+                if (passwordRep.value && password.value !== passwordRep.value) {
+                    passwordRep.setCustomValidity('Passwords do not match');
+                } else {
+                    passwordRep.setCustomValidity('');
+                }
+            }
+
+            password.addEventListener('input', checkPasswordMatch);
+            passwordRep.addEventListener('input', checkPasswordMatch);
+
+            signupForm.addEventListener('submit', function (e) {
+                checkPasswordMatch();
+                if (!this.checkValidity()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                this.classList.add('was-validated');
+            });
+        </script>
     </div>
-    <div class="form-group">
-        <label for="email">Email address</label>
-        <input type="email" class="form-control" id="email" name="email" autocomplete="email" required>
-    </div>
-    <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" class="form-control" id="password" name="password" autocomplete="new-password" required>
-    </div>
-    <div class="form-group">
-        <label for="password_rep">Confirm password</label>
-        <input type="password" class="form-control" id="password_rep" name="password_rep" autocomplete="new-password" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Sign Up</button>
-</form>
+</div>
 {% endblock %}

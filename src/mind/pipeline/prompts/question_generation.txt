@@ -1,30 +1,34 @@
-You will be given a PASSAGE and an excerpt from the FULL_DOCUMENT where it appears. Imagine a user is seeking information on a specific topic and submits a YES/NO question. Your task is to generate such questions that would lead a retrieval system to find the passage and use it to generate an answer.
+You are a factual claim extractor. Given a PASSAGE and its surrounding FULL_DOCUMENT context, generate YES/NO questions that target the most important verifiable factual claims in the PASSAGE.
 
-#### TASK BREAKDOWN ####
+## Instructions
 
-1. Determine whether the provided PASSAGE within the given context provides factual information that can be transformed into YES/NO questions. Avoid using subjective opinions, personal experiences, author affiliations, or vague references.
-2. If the PASSAGE contains factual information, generate simple and direct YES/NO questions from the PASSAGE only. Do not use the FULL_DOCUMENT to generate questions. Avoid ambiguous language, such as pronouns ("it," "they") or vague references ("the..."), and always define acronyms and abbreviations within each question (e.g., write "Multisystem Inflammatory Syndrome in Children (MIS-C)" instead of just "MIS-C").
-3. Make sure the questions are phrased in a way that a general user might naturally ask, avoiding overly technical or detailed wording unless necessary.
-4. If the PASSAGE does not contain suitable factual information, return N/A followed by a reasoning statement explaining why it is not suitable for generating YES/NO questions.
+1. Identify the key factual claims in the PASSAGE: numbers, dates, percentages, cause-effect relationships, categorical assertions, comparisons, and specific recommendations.
+2. For each claim, write a direct YES/NO question that a user might naturally ask.
+3. Questions must be self-contained — define all acronyms (e.g., "Multisystem Inflammatory Syndrome in Children (MIS-C)" not just "MIS-C") and avoid pronouns or vague references like "it" or "the study."
+4. Do NOT generate questions about subjective opinions, personal experiences, author affiliations, or vague generalizations.
+5. If the PASSAGE lacks verifiable factual claims, return N/A with a brief reason.
+6. Use ONLY the PASSAGE to generate questions. The FULL_DOCUMENT provides context only.
 
-#### EXAMPLES ####
+## Priority: focus on claims most likely to be contradicted across different sources — quantities, thresholds, recommendations, and causal statements.
+
+## Examples
 
 PASSAGE: Risk factors: Children diagnosed with MIS-C are often between the ages of 5 and 11 years old. But cases are reported among children ages 1 to 15. A few cases have also happened in older kids and in babies.
 
 FULL_DOCUMENT: Overview Multisystem inflammatory syndrome in children (MIS-C) is a group of symptoms linked to swollen, called inflamed, organs or tissues. People with MIS-C need care in the hospital [...]
 
-QUESTIONS: Can children with Multisystem Inflammatory Syndrome in Children (MIS-C) be as young as 1 year old?
+QUESTIONS:
 Are most cases of Multisystem Inflammatory Syndrome in Children (MIS-C) found in children between 5 and 11 years old?
-Have there been cases of Multisystem Inflammatory Syndrome in Children (MIS-C) in babies?
+Can children as young as 1 year old be diagnosed with Multisystem Inflammatory Syndrome in Children (MIS-C)?
 
 
-PASSAGE: How has COVID-19 impacted you personally and professionally this year: I'm a single mom and when my kids were home schooling it made it tremendously hard for them to be home with me here at work. That was a big challenge. I think it's difficult for all of us health care providers, who are taking care of the sickest patients and working with stressed out families. It adds an additional challenge for us.
+PASSAGE: How has COVID-19 impacted you personally and professionally this year: I'm a single mom and when my kids were home schooling it made it tremendously hard for them to be home with me here at work.
 
-FULL_DOCUMENT: Stacey Stone, M.D., began walking the halls of All Children’s Hospital well before she wore a doctor’s white coat. Touring the neonatal intensive care unit (NICU) as a teenager, she became smitten with the idea [...]
+FULL_DOCUMENT: Stacey Stone, M.D., began walking the halls of All Children's Hospital well before she wore a doctor's white coat. [...]
 
-QUESTIONS: N/A, the passage provides subjective information about the personal and professional impact of COVID-19 on the author, which is not suitable for generating YES/NO questions.
+QUESTIONS: N/A, the passage provides subjective personal experiences rather than verifiable factual claims.
 
-#### YOUR TASK ####
+## Your Task
 
 PASSAGE: {passage}
 FULL_DOCUMENT: {full_document}

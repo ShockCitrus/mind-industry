@@ -8,7 +8,7 @@ import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 from kneed import KneeLocator  # type: ignore
 from mind.pipeline.utils import get_doc_top_tpcs
-from mind.utils.utils import init_logger
+from mind.utils.utils import init_logger, get_optimization_settings
 from scipy import sparse
 from scipy.ndimage import uniform_filter1d
 from sentence_transformers import SentenceTransformer, util  # type: ignore
@@ -31,6 +31,12 @@ class IndexRetriever:
         config_path: Path = Path("config/config.yaml")
     ):
         self._logger = logger if logger else init_logger(config_path, __name__)
+        
+        # OPT-002: Load optimization settings for batched embeddings
+        self._opt_settings = get_optimization_settings(str(config_path), self._logger)
+        self._batched_embeddings = self._opt_settings.get("batched_embeddings", False)
+        if self._batched_embeddings:
+            self._logger.info("OPT-002: Batched embeddings enabled")
     
         self.model = model
         self.batch_size = batch_size
@@ -58,6 +64,144 @@ class IndexRetriever:
         self._logger.debug("Using BGE/E5 model, adding prefixes to texts.")
         pfx = "query: " if is_query else "passage: "
         return [t if t.startswith(pfx) else (pfx + t) for t in texts]
+
+    # =========================================================================
+    # OPT-002: Batched Query Embeddings
+    # =========================================================================
+    
+    def encode_queries(self, queries, batch_size: int = None) -> np.ndarray:
+        """
+        Batch encode multiple queries for efficient GPU utilization.
+        
+        Parameters
+        ----------
+        queries : str or List[str]
+            Single query or list of queries to encode.
+        batch_size : int, optional
+            Batch size for encoding. Defaults to self.batch_size.
+            
+        Returns
+        -------
+        np.ndarray
+            Embeddings array of shape (n_queries, embedding_dim).
+        """
+        batch_size = batch_size or self.batch_size
+        
+        if isinstance(queries, str):
+            queries = [queries]
+        
+        queries = self._prefix(queries, is_query=True)
+        
+        if self.do_norm:
+            embeddings = self.model.encode(
+                queries,
+                batch_size=batch_size,
+                show_progress_bar=False,
+                convert_to_numpy=True,
+                normalize_embeddings=True
+            )
+        else:
+            embeddings = self.model.encode(
+                queries,
+                batch_size=batch_size,
+                show_progress_bar=False,
+                convert_to_numpy=True
+            )
+        
+        return embeddings.astype(np.float32)
+    
+    def _retrieve_enn_with_embedding(self, query_embedding: np.ndarray, top_k: int = None) -> list:
+        """
+        ENN retrieval with pre-computed embedding.
+        
+        Parameters
+        ----------
+        query_embedding : np.ndarray
+            Pre-computed query embedding of shape (embedding_dim,) or (1, embedding_dim).
+        top_k : int, optional
+            Number of results to return. Defaults to self.top_k.
+            
+        Returns
+        -------
+        list
+            List of dicts with doc_id and score.
+        """
+        top_k = top_k or self.top_k
+        
+        if query_embedding.ndim == 1:
+            query_embedding = query_embedding.reshape(1, -1)
+        
+        distances, indices = self.faiss_index.search(
+            query_embedding.astype(np.float32), 
+            top_k
+        )
+        
+        results = []
+        for idx, dist in zip(indices[0], distances[0]):
+            if idx >= 0:
+                results.append({
+                    "doc_id": self.doc_ids[idx],
+                    "score": float(dist)
+                })
+        return results
+    
+    def _retrieve_topic_with_embedding(
+        self, 
+        query_embedding: np.ndarray, 
+        theta_query: list, 
+        top_k: int = None,
+        thrs: list = None,
+        do_weighting: bool = None
+    ) -> list:
+        """
+        Topic-based retrieval with pre-computed embedding.
+        
+        Parameters
+        ----------
+        query_embedding : np.ndarray
+            Pre-computed query embedding.
+        theta_query : list
+            Topic distribution for the query.
+        top_k : int, optional
+            Number of results to return.
+        thrs : list, optional
+            Topic thresholds.
+        do_weighting : bool, optional
+            Whether to weight scores by topic weights.
+            
+        Returns
+        -------
+        list
+            Sorted list of results with doc_id, topic, and score.
+        """
+        top_k = top_k or self.top_k
+        do_weighting = do_weighting if do_weighting is not None else self.do_weighting
+        
+        if query_embedding.ndim == 1:
+            query_embedding = query_embedding.reshape(1, -1)
+        
+        results = []
+        for topic, weight in theta_query:
+            thr = thrs[topic] if thrs is not None else 0
+            if weight > thr:
+                topic_data = self.topic_indices.get(topic)
+                if topic_data and topic_data["index"] is not None:
+                    index = topic_data["index"]
+                    doc_ids = topic_data["doc_ids"]
+                    distances, indices = index.search(query_embedding.astype(np.float32), top_k)
+                    for dist, idx in zip(distances[0], indices[0]):
+                        if idx != -1:
+                            score = dist * weight if do_weighting else dist
+                            results.append({"topic": topic, "doc_id": doc_ids[idx], "score": score})
+        
+        # Remove duplicates, keeping highest score
+        unique_results = {}
+        for result in results:
+            doc_id = result["doc_id"]
+            if doc_id not in unique_results or result["score"] > unique_results[doc_id]["score"]:
+                unique_results[doc_id] = result
+        
+        return sorted(unique_results.values(), key=lambda x: x["score"], reverse=True)[:top_k]
 
     def _safe_nprobe(self, nlist: int) -> int:
         # Start around 10% of nlist. Clamp by [1, self.nprobe] and by nlist itself.
@@ -118,13 +262,19 @@ class IndexRetriever:
             / Path(thetas_path).parent.parent.stem
             / method
         )
+        
+        # OPT-011: Check if memory-mapped loading is enabled
+        use_mmap = self._opt_settings.get("faiss_mmap", False)
+        io_flags = faiss.IO_FLAG_MMAP if use_mmap else 0
+        if use_mmap:
+            self._logger.info("OPT-011: Using memory-mapped FAISS indices")
 
         if method in ["ENN", "ANN"]:
             index_path = self.save_path / "faiss_index.index"
             doc_ids_path = self.save_path / "doc_ids.npy"
             if index_path.exists() and doc_ids_path.exists():
                 self._logger.info(f"Loading FAISS index and doc_ids for method {method}...")
-                self.faiss_index = faiss.read_index(str(index_path))
+                self.faiss_index = faiss.read_index(str(index_path), io_flags)
                 if method == "ANN":
                     # cap nprobe by nlist if available
                     self.faiss_index.nprobe = self._safe_nprobe(getattr(self.faiss_index, "nlist", 0))
@@ -138,7 +288,7 @@ class IndexRetriever:
                 topic = int(index_file.stem.split("_")[-1])
                 doc_ids_path = self.save_path / f"doc_ids_topic_{topic}.npy"
                 if doc_ids_path.exists():
-                    index = faiss.read_index(str(index_file))
+                    index = faiss.read_index(str(index_file), io_flags)
                     if method == "TB-ANN":
                         index.nprobe = self._safe_nprobe(getattr(index, "nlist", 0))
                     doc_ids = np.load(doc_ids_path, allow_pickle=True)
@@ -342,6 +492,12 @@ class IndexRetriever:
         if self.faiss_index is None or self.doc_ids is None:
             raise ValueError("FAISS index or doc_ids not loaded. Make sure to call load_indices first.")
 
+        # OPT-002: Use batched encoding if enabled
+        if self._batched_embeddings:
+            query_embedding = self.encode_queries(query)[0]  # Returns (1, dim), take first
+            return self._retrieve_enn_with_embedding(query_embedding, top_k)
+        
+        # Original single-query encoding
         q = self._prefix([query], is_query=True)
         if self.do_norm:
             query_embedding = self.model.encode(q, normalize_embeddings=True)[0]  # shape: (dim,)
@@ -361,6 +517,14 @@ class IndexRetriever:
         if self.topic_indices is None:
             raise ValueError("Topic-based indices not loaded.")
 
+        # OPT-002: Use batched encoding if enabled
+        if self._batched_embeddings:
+            query_embedding = self.encode_queries(query)[0]  # Returns (1, dim), take first
+            return self._retrieve_topic_with_embedding(
+                query_embedding, theta_query, top_k, thrs, do_weighting
+            )
+        
+        # Original single-query encoding
         if self.do_norm:
             query_embedding = self.model.encode([query], normalize_embeddings=True)[0]
         else:

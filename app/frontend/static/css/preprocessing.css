@@ -1,0 +1,152 @@
+/* =======================================================
+   preprocessing.css  – Styles extracted from preprocessing.html
+   Phase 6.1-6.2: Split Monolithic Templates
+   ======================================================= */
+
+/* ── Modal Form Enhancements ── */
+#stepModal .form-control,
+#stepModal .form-select {
+    padding: 0.75rem 1rem;
+    font-size: 1.1rem;
+    height: auto;
+}
+
+#stepModal label {
+    font-weight: 500;
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+#stepModal .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 1.1rem;
+}
+
+#stepModal .modal-body {
+    padding: 2rem;
+}
+
+#stepModal .details-toggle {
+    padding: 12px;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ── Step-Box Pipeline Diagram ── */
+.step-box {
+    width: 150px;
+    height: 100px;
+    background-color: var(--bs-card-bg);
+    border: 2px solid var(--bs-success);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+    font-weight: bold;
+    color: var(--bs-body-color);
+}
+
+.step-box:hover {
+    background-color: var(--bs-tertiary-bg, #e9f7ef);
+    transform: scale(1.05);
+    box-shadow: 0 0 12px rgba(var(--bs-success-rgb), 0.3);
+}
+
+.arrow {
+    font-size: 2rem;
+    margin: 0 15px;
+    color: var(--bs-success);
+}
+
+/* ── Details Toggle ── */
+.details-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    user-select: none;
+    border: 1px solid var(--bs-border-color);
+    color: var(--bs-body-color);
+}
+
+.details-toggle:hover {
+    background-color: var(--bs-secondary-bg, #e9ecef);
+}
+
+.details-toggle .arrow {
+    border: solid var(--bs-body-color);
+    border-width: 0 2px 2px 0;
+    display: inline-block;
+    padding: 4px;
+    transform: rotate(45deg);
+    transition: transform 0.3s ease;
+    margin-left: 10px;
+}
+
+.details-toggle.active .arrow {
+    transform: rotate(-135deg);
+}
+
+.details-text {
+    white-space: pre-wrap;
+    tab-size: 4;
+    -moz-tab-size: 4;
+    line-height: 1.5;
+    font-size: inherit;
+    font-family: inherit;
+}
+
+/* ── Modal Slide Animation ── */
+#modal-body-1 {
+    overflow: hidden;
+    position: relative;
+    max-width: 800px;
+    width: 100%;
+    margin: auto;
+    min-height: 250px;
+    transition: height 0.25s ease;
+    box-sizing: border-box;
+    padding: 15px;
+}
+
+.step-slide {
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: transform 0.25s ease-in-out;
+    transform: translateX(100%);
+    padding: 15px;
+    box-sizing: border-box;
+    overflow: visible;
+}
+
+.step-slide.active-slide {
+    transform: translateX(0);
+    z-index: 2;
+}
+
+.step-slide.previous-slide {
+    transform: translateX(-100%);
+    z-index: 1;
+}
+
+/* ── Form Switch Sizing ── */
+.form-check.form-switch {
+    padding-left: 2.25rem;
+}
+
+.form-check.form-switch .form-check-input {
+    width: 2.75rem;
+    height: 1.5rem;
+    border-radius: 1rem;
+    cursor: pointer;
+}

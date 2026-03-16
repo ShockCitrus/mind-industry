@@ -218,7 +218,8 @@ def obtain_langs_TM(pathTM: str):
 
 def process_mind_results(topics: list[int], directory: str):
     topics_regex = "|".join(str(t) for t in topics)
-    pattern = re.compile(rf"results_topic_({topics_regex})_(\d+)\.parquet$")
+    # Also matches the final-flush file: results_topic_final_0.parquet
+    pattern = re.compile(rf"results_topic_(?:({topics_regex})|final)_(\d+)\.parquet$")
 
     mapping = {
         'source_chunk': 'anchor_passage',

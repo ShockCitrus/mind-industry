@@ -1,0 +1,41 @@
+# Core Flask
+Flask==3.1.1
+
+# NLP & ML Core (optimized)
+sentence-transformers==5.1.0
+transformers==4.41.2
+datasets
+torch==2.5.1+cpu  # CPU-only version saves ~2GB
+
+# FAISS & Embeddings
+faiss-cpu
+
+# Data Processing
+pandas==2.3.2
+numpy<2.0.0,>=1.18.5
+pyarrow==16.1.0
+scikit_learn==1.7.1
+
+# LLM APIs
+ollama==0.5.3
+openai==1.106.1
+
+# Utilities
+colorama==0.4.6
+joblib==1.4.2
+kneed==0.8.5
+openpyxl
+python-dotenv==1.1.1
+PyYAML==6.0.2
+Requests==2.32.5
+tqdm==4.67.1
+protobuf>=4.25.8
+
+# NLP Tokenization
+sentencepiece==0.2.1
+sacremoses
+
+# FastText (for language detection in segmenter)
+fasttext==0.9.3
+
+# - pyLDAvis==3.4.1 (visualization library - not used in production)

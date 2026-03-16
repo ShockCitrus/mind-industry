@@ -42,13 +42,13 @@ FEVER_INSTRUCTIONS_PATH = "templates/transform_fever.txt"
 _4_INSTRUCTIONS_PATH = "templates/discrepancy_detection.txt"
 
 ### Prompter
+# NOTE: model and host are read from config/config.yaml (llm.default section).
+# To switch backends, update 'llm.default.backend' and 'llm.default.model'.
 prompter_create = Prompter(
     model_type="gpt-4o-2024-08-06")
 
 prompter_disc = Prompter(
-    #model_type="qwen:32b",
-    model_type="gpt-4o-2024-08-06",
-    ollama_host="http://kumo01.tsc.uc3m.es:11434")
+    model_type="gpt-4o-2024-08-06")
 
 counter_ok = 0
 new_dataset = []

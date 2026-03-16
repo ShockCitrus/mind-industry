@@ -3,7 +3,7 @@ import dotenv
 import requests
 
 from views import login_required_custom
-from flask import Blueprint, render_template, flash, session
+from flask import Blueprint, render_template, flash, session, request, jsonify
 
 
 dataset_bp = Blueprint('dataset', __name__)
@@ -33,3 +33,37 @@ def datasets():
         datasets, names, shapes, stages = [], [], [], []
 
     return render_template("datasets.html", user_id=user_id, datasets=datasets, names=names, shape=shapes, stages=stages, zip=zip)
+
+
+@dataset_bp.route('/delete_dataset', methods=['DELETE'])
+@login_required_custom
+def delete_dataset():
+    email = session.get('user_id')
+    stage = request.args.get('stage')
+    dataset_name = request.args.get('dataset_name')
+
+    if not stage or not dataset_name:
+        return jsonify({'error': 'Missing stage or dataset_name'}), 400
+
+    try:
+        resp = requests.delete(f"{MIND_WORKER_URL}/dataset/{email}/{stage}/{dataset_name}")
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({'error': 'Backend service unavailable'}), 503
+
+
+@dataset_bp.route('/delete_detection', methods=['DELETE'])
+@login_required_custom
+def delete_detection():
+    email = session.get('user_id')
+    tm = request.args.get('TM')
+    topics_slug = request.args.get('topics_slug')
+
+    if not tm or not topics_slug:
+        return jsonify({'error': 'Missing TM or topics_slug'}), 400
+
+    try:
+        resp = requests.delete(f"{MIND_WORKER_URL}/detection/{email}/{tm}/{topics_slug}")
+        return jsonify(resp.json()), resp.status_code
+    except requests.exceptions.RequestException:
+        return jsonify({'error': 'Backend service unavailable'}), 503

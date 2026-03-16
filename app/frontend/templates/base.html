@@ -1,163 +1,201 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" 
-    href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
-    integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
-    crossorigin="anonymous"
-    >
+    <meta name="description"
+        content="MIND — Multilingual Inconsistent Notion Detection. A topic-modeling and LLM-based pipeline for identifying discrepancies across multilingual knowledge bases.">
+    <meta name="robots" content="noindex, nofollow">
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
 
-    <!-- JS -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <title>{% block title %}AUX{% endblock %}</title>
+    <!-- CDN Preconnect -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.datatables.net" crossorigin>
+
+    <!-- Halfmoon v2 (Bootstrap 5 compatible) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/halfmoon@2.0.2/css/halfmoon.min.css"
+        crossorigin="anonymous">
+
+    <!-- Custom Branding -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+
+    <!-- DataTables (BS5 Styling) -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css"
+        crossorigin="anonymous">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web" crossorigin="anonymous"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
+
+    <title>{% block title %}MIND{% endblock %}</title>
 </head>
+
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
-        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
 
-    <div class="collapse navbar-collapse" id="navbarNav">
-        <!-- Left-side navigation -->
-        <ul class="navbar-nav">
-            <li class="nav-item active">
-                <a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
-            </li>
-            {% if user_id %}
-            <li class="nav-item">
-                <a class="nav-link" href="/datasets">Datasets for detection</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="/preprocessing">Preprocessing</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="/detection">Detection</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="/detectionAllResults">Detection Results</a>
-            </li>
-            {% endif %}
-        </ul>
+    <script>
+        // Theme init — run early to prevent flash of wrong theme
+        const saved = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-bs-theme', saved);
+    </script>
 
-        <!-- Right-side navigation -->
-        <ul class="navbar-nav ml-auto">
-            {% if user_id %}
-            <li class="nav-item">
-                <a class="nav-link" href="/profile">Profile</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="logOut" href="/logout">Log out</a>
-            </li>
-            {% else %}
-            <li class="nav-item">
-                <a class="nav-link" id="login" href="/login">Log in</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" id="signUp" href="/sign-up">Sign up</a>
-            </li>
-            {% endif %}
-        </ul>
-    </div>
-</nav>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- Left-side navigation -->
+            <ul class="navbar-nav">
+                <li class="nav-item active">
+                    <a class="nav-link" href="/"><i class="ph ph-house"></i> Home</a>
+                </li>
+                {% if user_id %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/datasets"><i class="ph ph-database"></i> Datasets</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/preprocessing"><i class="ph ph-funnel"></i> Preprocessing</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/detection"><i class="ph ph-chart-bar"></i> Detection</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/detectionAllResults"><i class="ph ph-list-checks"></i> Results</a>
+                </li>
+                {% endif %}
+            </ul>
 
-<div class="alert-container" style="position: fixed; top: 75px; left: 5%; width: 90%; z-index: 9999;">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
+            <!-- Right-side navigation -->
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <button class="nav-link btn-theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+                        <i class="ph ph-moon" id="theme-icon"></i>
                     </button>
-                </div>
-            {% endfor %}
+                </li>
+                {% if user_id %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/profile"><i class="ph ph-user"></i> Profile</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="logOut" href="/logout"><i class="ph ph-sign-out"></i> Log out</a>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" id="login" href="/login"><i class="ph ph-sign-in"></i> Log in</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="signUp" href="/sign-up"><i class="ph ph-user-plus"></i> Sign up</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
 
-            <script>
-            document.addEventListener('DOMContentLoaded', function() {
+
+    <div class="alert-container" style="position: fixed; top: 75px; left: 5%; width: 90%; z-index: 9999;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
                 const alerts = document.querySelectorAll('.alert-dismissible');
-                alerts.forEach(function(alert) {
-                    setTimeout(function() {
-                        $(alert).alert('close');
+                alerts.forEach(function (alert) {
+                    setTimeout(function () {
+                        const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                        if (bsAlert) bsAlert.close();
                     }, 5000);
                 });
             });
         </script>
         {% endif %}
-    {% endwith %}
-</div>
+        {% endwith %}
+    </div>
 
-<div id="progress-container-master" class="container-fluid fixed-top" style="z-index: 1030; top: 56px; padding-left: 0; padding-right: 0;">
-    <div id="dynamic-progress-bars" class="container"></div>
-</div>
+    <div id="progress-container-master" class="container-fluid fixed-top"
+        style="z-index: 1030; top: 56px; padding-left: 0; padding-right: 0;">
+        <div id="dynamic-progress-bars" class="container"></div>
+    </div>
 
-<div class="container mt-5">
-    {% block content %}{% endblock %}
-</div>
+    <div class="container mt-5">
+        {% block breadcrumb %}{% endblock %}
+        {% block content %}{% endblock %}
+    </div>
 
-<div class="container mt-5" style="margin-top: 20px; width: 1px; height: 5px;"></div>
+    <footer class="text-center text-muted py-4 mt-5 border-top" style="font-size: 0.85rem;">
+        <p class="mb-1">
+            MIND — Multilingual Inconsistent Notion Detection
+        </p>
+        <p class="mb-0">
+            © 2026 Universidad Carlos III de Madrid &amp; University of Maryland ·
+            <a href="mailto:lcalvo@pa.uc3m.es" class="text-decoration-none">lcalvo@pa.uc3m.es</a> ·
+            <a href="mailto:alonsomadronal@gmail.com" class="text-decoration-none">alonsomadronal@gmail.com</a>
+        </p>
+    </footer>
 
-{% if user_id %}
-<script>
-    const PROGRESS_API_ENDPOINT = '/api/preprocess_status';
-    const POLL_INTERVAL = 2500;
-    const START_API_ENDPOINT = '/api/start_preprocess';
+    {% if user_id %}
+    <script>
+        const PROGRESS_API_ENDPOINT = '/api/preprocess_status';
+        const POLL_INTERVAL = 2500;
+        const START_API_ENDPOINT = '/api/start_preprocess';
 
-    function startPreprocessTask() {
-        fetch(START_API_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => {
-            return response.json().then(data => ({
-                status: response.status,
-                body: data
-            }));
-        })
-        .then(result => {
-            const status = result.status;
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        })
-        .finally(() => {
-        });
-    }
-    
-    const MAX_CONCURRENT_TASKS = 4;
-    let dismissedTaskIds = new Set();
-    window.currentRunningTaskCount = 0;
-
-    function createProgressBarHTML(task) {
-        let percent = task.percent;
-        let message = task.message;
-        let isSuccess = percent === 100;
-        let isError = percent < 0;
-        let category = isSuccess ? 'success' : isError ? 'danger' : 'info';
-        
-        let barClass = 'progress-bar progress-bar-striped';
-        if (!isSuccess && !isError) {
-            barClass += ' progress-bar-animated';
+        function startPreprocessTask() {
+            fetch(START_API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+                .then(response => {
+                    return response.json().then(data => ({
+                        status: response.status,
+                        body: data
+                    }));
+                })
+                .then(result => {
+                    const status = result.status;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                });
         }
 
-        return `
+        const MAX_CONCURRENT_TASKS = 4;
+        let dismissedTaskIds = new Set();
+        window.currentRunningTaskCount = 0;
+
+        function createProgressBarHTML(task) {
+            let percent = task.percent;
+            let message = task.message;
+            let isSuccess = percent === 100;
+            let isError = percent < 0;
+            let category = isSuccess ? 'success' : isError ? 'danger' : 'info';
+
+            let barClass = 'progress-bar progress-bar-striped';
+            if (!isSuccess && !isError) {
+                barClass += ' progress-bar-animated';
+            }
+
+            return `
             <div id="alert-${task.id}" class="alert alert-${category} alert-dismissible fade show mb-2" role="alert" data-task-id="${task.id}">
                 <h6 class="alert-heading mb-1">${task.name}</h6>
                 <p class="mb-1 small">${message}</p>
@@ -172,119 +210,193 @@
                         ${percent < 0 ? 'Error' : percent + '%'}
                     </div>
                 </div>
-                <!-- Botón de cierre para eliminar visualmente la alerta -->
-                <button type="button" class="close" data-dismiss="alert" aria-label="Cerrar" onclick="dismissTask('${task.id}')">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" onclick="dismissTask('${task.id}')"></button>
             </div>
         `;
-    }
-    
-    window.dismissTask = function(taskId) {
-        dismissedTaskIds.add(taskId);
-    }
+        }
 
-    function updateProgressBar() {
-        fetch(PROGRESS_API_ENDPOINT)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                const tasks = data.tasks || [];
-                const container = document.getElementById('dynamic-progress-bars');
-                
-                window.currentRunningTaskCount = data.running_count || 0;
-                
-                const activeTaskIds = tasks.map(t => t.id);
-                const currentAlerts = Array.from(container.children);
-                
-                currentAlerts.forEach(alertDiv => {
-                    const taskId = alertDiv.getAttribute('data-task-id');
-                    if (!activeTaskIds.includes(taskId) && !dismissedTaskIds.has(taskId)) {
-                        $(alertDiv).alert('close'); 
+        window.dismissTask = function (taskId) {
+            dismissedTaskIds.add(taskId);
+        }
+
+        function updateProgressBar() {
+            fetch(PROGRESS_API_ENDPOINT)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                });
+                    return response.json();
+                })
+                .then(data => {
+                    const tasks = data.tasks || [];
+                    const container = document.getElementById('dynamic-progress-bars');
 
-                let tasksToRender = [];
-                tasks.forEach(task => {
-                    if (!dismissedTaskIds.has(task.id)) {
-                        const existingAlert = document.getElementById(`alert-${task.id}`);
-                        
-                        if (existingAlert) {
-                            const percent = task.percent;
-                            const message = task.message;
-                            const isSuccess = percent === 100;
-                            const isError = percent < 0;
-                            const category = isSuccess ? 'success' : isError ? 'danger' : 'info';
-                            
-                            existingAlert.className = `alert alert-${category} alert-dismissible fade show mb-2`;
-                            
-                            const bar = document.getElementById(`bar-${task.id}`);
-                            bar.style.width = percent + '%';
-                            bar.setAttribute('aria-valuenow', percent);
-                            bar.textContent = percent < 0 ? 'Error' : percent + '%';
-                            
-                            if (isSuccess || isError) {
-                                bar.classList.remove('progress-bar-animated');
-                            } else {
-                                bar.classList.add('progress-bar-animated');
-                            }
-                            
-                            existingAlert.querySelector('p').textContent = message;
+                    window.currentRunningTaskCount = data.running_count || 0;
 
-                            if (isSuccess || isError) {
-                                if (!existingAlert.dataset.autoCloseSet) {
-                                    existingAlert.dataset.autoCloseSet = 'true';
-                                    setTimeout(() => {
-                                        if (!dismissedTaskIds.has(task.id)) {
-                                            function closeAlert(taskId) {
-                                                const alertElement = document.getElementById(`alert-${taskId}`);
-                                                if (alertElement) {
-                                                    const alertInstance = bootstrap.Alert.getOrCreateInstance(alertElement);
-                                                    alertInstance.close();
-                                                }
-                                            }
+                    const activeTaskIds = tasks.map(t => t.id);
+                    const currentAlerts = Array.from(container.children);
 
-                                            closeAlert(task.id);
-
-                                            setTimeout(() => {
-                                                if (!dismissedTaskIds.has(task.id)) {
-                                                    closeAlert(task.id);
-                                                    dismissedTaskIds.add(task.id);
-                                                }
-                                            }, 8000); 
-                                            dismissedTaskIds.add(task.id);
-                                        }
-                                    }, 8000);
-                                }
-                            }
-                            
-                        } else {
-                            tasksToRender.push(task);
+                    currentAlerts.forEach(alertDiv => {
+                        const taskId = alertDiv.getAttribute('data-task-id');
+                        if (!activeTaskIds.includes(taskId) && !dismissedTaskIds.has(taskId)) {
+                            const bsAlert = bootstrap.Alert.getOrCreateInstance(alertDiv);
+                            if (bsAlert) bsAlert.close();
                         }
-                    }
-                });
-                
-                if (tasksToRender.length > 0) {
-                    tasksToRender.forEach(task => {
-                        container.insertAdjacentHTML('beforeend', createProgressBarHTML(task));
                     });
-                }
-                setTimeout(updateProgressBar, POLL_INTERVAL);
 
-            })
-            .catch(error => {
-                console.warn('Error in API.', error);
-                setTimeout(updateProgressBar, POLL_INTERVAL);
-            });
-    }
+                    let tasksToRender = [];
+                    tasks.forEach(task => {
+                        if (!dismissedTaskIds.has(task.id)) {
+                            const existingAlert = document.getElementById(`alert-${task.id}`);
 
-    document.addEventListener('DOMContentLoaded', () => {updateProgressBar();});
-</script>
-{% endif %}
+                            if (existingAlert) {
+                                const percent = task.percent;
+                                const message = task.message;
+                                const isSuccess = percent === 100;
+                                const isError = percent < 0;
+                                const category = isSuccess ? 'success' : isError ? 'danger' : 'info';
+
+                                existingAlert.className = `alert alert-${category} alert-dismissible fade show mb-2`;
+
+                                const bar = document.getElementById(`bar-${task.id}`);
+                                bar.style.width = percent + '%';
+                                bar.setAttribute('aria-valuenow', percent);
+                                bar.textContent = percent < 0 ? 'Error' : percent + '%';
+
+                                if (isSuccess || isError) {
+                                    bar.classList.remove('progress-bar-animated');
+                                } else {
+                                    bar.classList.add('progress-bar-animated');
+                                }
+
+                                existingAlert.querySelector('p').textContent = message;
+
+                                if (isSuccess || isError) {
+                                    if (!existingAlert.dataset.autoCloseSet) {
+                                        existingAlert.dataset.autoCloseSet = 'true';
+                                        setTimeout(() => {
+                                            if (!dismissedTaskIds.has(task.id)) {
+                                                function closeAlert(taskId) {
+                                                    const alertElement = document.getElementById(`alert-${taskId}`);
+                                                    if (alertElement) {
+                                                        const alertInstance = bootstrap.Alert.getOrCreateInstance(alertElement);
+                                                        alertInstance.close();
+                                                    }
+                                                }
+
+                                                closeAlert(task.id);
+
+                                                setTimeout(() => {
+                                                    if (!dismissedTaskIds.has(task.id)) {
+                                                        closeAlert(task.id);
+                                                        dismissedTaskIds.add(task.id);
+                                                    }
+                                                }, 8000);
+                                                dismissedTaskIds.add(task.id);
+                                            }
+                                        }, 8000);
+                                    }
+                                }
+
+                            } else {
+                                tasksToRender.push(task);
+                            }
+                        }
+                    });
+
+                    if (tasksToRender.length > 0) {
+                        tasksToRender.forEach(task => {
+                            container.insertAdjacentHTML('beforeend', createProgressBarHTML(task));
+                        });
+                    }
+                    setTimeout(updateProgressBar, POLL_INTERVAL);
+
+                })
+                .catch(error => {
+                    console.warn('Error in API.', error);
+                    setTimeout(updateProgressBar, POLL_INTERVAL);
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { updateProgressBar(); });
+    </script>
+    {% endif %}
+
+    <!-- HTMX (for future Phase 3) -->
+    <script src="https://unpkg.com/htmx.org@1.9.12" crossorigin="anonymous"></script>
+
+    <!-- Bootstrap 5 Bundle (includes Popper 2) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"></script>
+
+    <!-- Keep jQuery for DataTables (Legacy) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
+
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js" crossorigin="anonymous"></script>
+
+    <!-- Theme Toggle Logic -->
+    <script>
+        const toggleTheme = () => {
+            const current = document.documentElement.getAttribute('data-bs-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-bs-theme', next);
+            localStorage.setItem('theme', next);
+            // Update icon
+            const icon = document.getElementById('theme-icon');
+            if (icon) {
+                icon.className = next === 'dark' ? 'ph ph-moon' : 'ph ph-sun';
+            }
+        };
+
+        // Set correct icon on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const theme = document.documentElement.getAttribute('data-bs-theme');
+            const icon = document.getElementById('theme-icon');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'ph ph-moon' : 'ph ph-sun';
+            }
+        });
+    </script>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;"
+        aria-live="polite"></div>
+
+    <script>
+        /**
+         * Show a non-blocking Bootstrap 5 toast notification.
+         * @param {string} message - Text to display.
+         * @param {'danger'|'warning'|'success'|'info'} type - Toast color variant.
+         */
+        function showToast(message, type = 'danger') {
+            const icons = { danger: 'warning-circle', warning: 'warning', success: 'check-circle', info: 'info' };
+            const labels = { danger: 'Error', warning: 'Warning', success: 'Success', info: 'Info' };
+            const icon = icons[type] || icons.info;
+            const label = labels[type] || labels.info;
+
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `
+      <div class="toast align-items-center text-bg-${type} border-0" role="alert"
+           aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="ph ph-${icon} me-2"></i><strong>${label}:</strong> ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                  data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>`;
+
+            const toastEl = wrapper.firstElementChild;
+            document.getElementById('toast-container').appendChild(toastEl);
+            const bsToast = new bootstrap.Toast(toastEl);
+            bsToast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+    </script>
 
 </body>
+
 </html>
