@@ -253,7 +253,7 @@ td.truncated {
 #logTerminal {
     background-color: #1e1e1e;
     color: #00ff00;
-    font-family: monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 0.85rem;
     padding: 10px;
     height: 300px;
