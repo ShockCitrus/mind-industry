@@ -313,15 +313,16 @@
                 {% if col in ['label', 'final_label'] %}
                 <th class="th-with-filter" style="position: relative;">
                     {{ col }}
+                    <!--
                     <div class="dropdown">
                         <button class="btn btn-light btn-sm filter-icon-btn filter-btn" type="button"
                             id="dropdown{{ loop.index0 }}" data-bs-toggle="dropdown" aria-haspopup="true"
                             aria-expanded="false" data-column="{{ col }}">
                             <i class="bi bi-droplet"></i>
                         </button>
+
                         <div class="dropdown-menu p-2" aria-labelledby="dropdown{{ loop.index0 }}"
                             style="max-height: 200px; overflow-y: auto;">
-                            <!-- All -->
                             <label class="dropdown-item">
                                 <input type="checkbox" class="filter-checkbox" data-value="ALL" checked> All
                             </label>
@@ -333,7 +334,9 @@
                             </label>
                             {% endfor %}
                         </div>
+                        
                     </div>
+                    -->
                 </th>
                 {% else %}
                 <th>{{ col }}</th>
@@ -463,12 +466,13 @@
             <i class="ph ph-play"></i>
             <span>Analyze Discrepancies</span>
         </button>
-
+        <!--
         <button class="btn btn-outline-info d-flex align-items-center gap-2" data-bs-toggle="modal"
             data-bs-target="#logModal" data-no-warning>
             <i class="ph ph-terminal-window"></i>
             <span>Check Status</span>
         </button>
+    -->
     </div>
 </div>
 

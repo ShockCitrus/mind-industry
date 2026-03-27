@@ -7,8 +7,8 @@ from pathlib import Path
 from queue import Queue, Empty
 from typing import List, Union, Tuple, Optional
 
-import pandas as pd
-import torch
+import pandas as pd # type: ignore
+import torch# type: ignore
 from colorama import Fore, Style
 from dotenv import dotenv_values
 from mind.pipeline.corpus import Corpus
@@ -16,7 +16,7 @@ from mind.pipeline.retriever import IndexRetriever
 from mind.pipeline.utils import extend_to_full_sentence
 from mind.prompter.prompter import Prompter
 from mind.utils.utils import init_logger, load_prompt, load_yaml_config_file, get_optimization_settings
-import numpy as np
+import numpy as np# type: ignore
 from sentence_transformers import SentenceTransformer  # type: ignore
 from tqdm import tqdm  # type: ignore
 
@@ -221,7 +221,6 @@ class MIND:
                 raise ValueError(f"Missing prompt path for: {name}")
             self.prompts[name] = load_prompt(path)
 
-        # --- Cost optimization settings (Strategies 1-7) ---
         cost_opt = self.config.get("cost_optimization", {})
         self._use_merged_evaluation = cost_opt.get("use_merged_evaluation", False)
         self._skip_subquery_generation = cost_opt.get("skip_subquery_generation", False)

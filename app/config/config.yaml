@@ -76,17 +76,17 @@ mind:
     merged_evaluation_dynamic: /src/mind/pipeline/prompts/merged_evaluation_dynamic.txt
   # Cost optimization settings (see detection_cost_optimization_guide.md)
   cost_optimization:
-    # Strategy 1: Use merged evaluation prompt (answer + classify in one call)
+    # (answer + classify in one call)
     use_merged_evaluation: false # true
-    # Strategy 2: Skip LLM-based subquery generation, use questions directly
+    # Skip LLM-based subquery generation, use questions directly
     skip_subquery_generation: false # true
-    # Strategy 3: Embedding pre-filter threshold (0 = disabled)
+    # Embedding pre-filter threshold (0 = disabled)
     embedding_prefilter_threshold: 0
-    # Strategy 4: Relevance checking method — "llm" (original) or "local" (cross-encoder)
+    #
     relevance_method: "llm"
-    # Strategy 5: Maximum questions per source chunk (null = no limit)
+    # Maximum questions per source chunk (null = no limit)
     max_questions_per_chunk: null # 2
-    # Strategy 6: Minimum score ratio for retrieved targets (0 = disabled)
+    # Minimum score ratio for retrieved targets (0 = disabled)
     retrieval_min_score_ratio: 0
     retrieval_max_k: 5
   embedding_models:
