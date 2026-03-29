@@ -382,3 +382,12 @@ def init_config(
 
     output.write_text(template)
     success(f"Template written to {output}")
+
+
+# ---------------------------------------------------------------------------
+# mind detect peek
+# ---------------------------------------------------------------------------
+
+from mind.cli.commands.peek import peek  # noqa: E402, F401
+
+app.command()(peek)
