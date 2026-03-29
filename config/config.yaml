@@ -75,7 +75,7 @@ mind:
     relevance_checking: src/mind/pipeline/prompts/relevance_checking.txt
     merged_evaluation: src/mind/pipeline/prompts/merged_evaluation.txt
     merged_evaluation_dynamic: src/mind/pipeline/prompts/merged_evaluation_dynamic.txt
-  # Cost optimization settings (see detection_cost_optimization_guide.md)
+    topic_label: src/mind/pipeline/prompts/topic_label.txt
   cost_optimization:
     # Strategy 1: Use merged evaluation prompt (answer + classify in one call)
     use_merged_evaluation: true
