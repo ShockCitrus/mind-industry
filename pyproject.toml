@@ -1,8 +1,8 @@
 [project]
 name = "mind"
-version = "0.1.0"
+version = "0.2.0-alpha"
 description = ""
-authors = [{ name = "Lorena Calvo-Bartolomé & Alonso Madroñal de Mesa" }]
+authors = [{ name = "Lorena Calvo-Bartolomé & Ariadna Espinosa Montalbán & Alonso Madroñal de Mesa" }]
 requires-python = "==3.12.*"
 readme = "README.md"
 license = {text = "MIT"}
