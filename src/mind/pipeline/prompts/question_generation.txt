@@ -1,35 +1,148 @@
 You are a factual claim extractor. Given a PASSAGE and its surrounding FULL_DOCUMENT context, generate YES/NO questions that target the most important verifiable factual claims in the PASSAGE.
 
-## Instructions
+## Task Instructions
 
-1. Identify the key factual claims in the PASSAGE: numbers, dates, percentages, cause-effect relationships, categorical assertions, comparisons, and specific recommendations.
-2. For each claim, write a direct YES/NO question that a user might naturally ask.
-3. Questions must be self-contained — define all acronyms (e.g., "Multisystem Inflammatory Syndrome in Children (MIS-C)" not just "MIS-C") and avoid pronouns or vague references like "it" or "the study."
-4. Do NOT generate questions about subjective opinions, personal experiences, author affiliations, or vague generalizations.
-5. If the PASSAGE lacks verifiable factual claims, return N/A with a brief reason.
-6. Use ONLY the PASSAGE to generate questions. The FULL_DOCUMENT provides context only.
+1. **Identify key factual claims**: Focus on numbers, dates, percentages, cause-effect relationships, categorical assertions, comparisons, and specific recommendations that could be contradicted in other sources.
 
-## Priority: focus on claims most likely to be contradicted across different sources — quantities, thresholds, recommendations, and causal statements.
+2. **Write self-contained questions**: Each question must:
+   - Be answerable with YES/NO (or a clear factual statement)
+   - Define all acronyms on first mention (e.g., "Multisystem Inflammatory Syndrome in Children (MIS-C)" not just "MIS-C")
+   - Avoid pronouns like "it", "this", "the study" — use explicit references
+   - Be independent (understandable without reading the passage first)
+
+3. **Exclude subjective content**:
+   - Do NOT ask about opinions, beliefs, or preferences
+   - Do NOT ask about author affiliations or personal experiences
+   - Do NOT ask about vague generalizations without specific metrics
+   - Skip meta-commentary about the text itself
+
+4. **Use the PASSAGE for content, FULL_DOCUMENT for context only**
+
+5. **Prioritize high-contradiction-risk claims**: Numbers, thresholds, medical statements, causal relationships, and specific recommendations are more likely to be contradicted across sources than generic statements.
 
 ## Examples
 
-PASSAGE: Risk factors: Children diagnosed with MIS-C are often between the ages of 5 and 11 years old. But cases are reported among children ages 1 to 15. A few cases have also happened in older kids and in babies.
+### Example 1: Multiple Factual Claims (Generate Multiple Questions)
+PASSAGE: "Risk factors: Children diagnosed with Multisystem Inflammatory Syndrome in Children (MIS-C) are often between the ages of 5 and 11 years old. But cases are reported among children ages 1 to 15. A few cases have also happened in older kids and in babies."
 
-FULL_DOCUMENT: Overview Multisystem inflammatory syndrome in children (MIS-C) is a group of symptoms linked to swollen, called inflamed, organs or tissues. People with MIS-C need care in the hospital [...]
+FULL_DOCUMENT: "Overview: Multisystem inflammatory syndrome in children (MIS-C) is a group of symptoms linked to swollen, called inflamed, organs or tissues. People with MIS-C need care in the hospital [...]"
+
+IDENTIFIED CLAIMS:
+1. Most MIS-C cases occur in ages 5-11 ✓
+2. MIS-C cases have been reported from age 1 to 15 ✓
+3. Cases have occurred in infants ✓
 
 QUESTIONS:
-Are most cases of Multisystem Inflammatory Syndrome in Children (MIS-C) found in children between 5 and 11 years old?
-Can children as young as 1 year old be diagnosed with Multisystem Inflammatory Syndrome in Children (MIS-C)?
+- Are most cases of Multisystem Inflammatory Syndrome in Children (MIS-C) found in children between 5 and 11 years old?
+- Can children as young as 1 year old be diagnosed with Multisystem Inflammatory Syndrome in Children (MIS-C)?
+- Have cases of Multisystem Inflammatory Syndrome in Children (MIS-C) been reported in infants younger than 1 year old?
 
+---
 
-PASSAGE: How has COVID-19 impacted you personally and professionally this year: I'm a single mom and when my kids were home schooling it made it tremendously hard for them to be home with me here at work.
+### Example 2: Exclude Subjective Content
+PASSAGE: "How has COVID-19 impacted you personally and professionally this year: I'm a single mom and when my kids were home schooling it made it tremendously hard for them to be home with me here at work."
 
-FULL_DOCUMENT: Stacey Stone, M.D., began walking the halls of All Children's Hospital well before she wore a doctor's white coat. [...]
+FULL_DOCUMENT: "Stacey Stone, M.D., began walking the halls of All Children's Hospital well before she wore a doctor's white coat. [...]"
 
-QUESTIONS: N/A, the passage provides subjective personal experiences rather than verifiable factual claims.
+IDENTIFIED CLAIMS: None are factual/verifiable
+- Personal experience: "single mom" + "difficult to manage"
+- Opinion: "tremendously hard"
+- No verifiable facts
+
+QUESTIONS: N/A — the passage provides subjective personal experiences rather than verifiable factual claims.
+
+---
+
+### Example 3: Numerical Claims (High Priority)
+PASSAGE: "Hormonal contraceptive pills containing estrogen increase the risk of blood clots by 3 to 4 times compared to women not using hormonal contraception. This risk is elevated immediately after starting the medication and gradually decreases over time, though it never returns to baseline."
+
+FULL_DOCUMENT: "[Medical background on contraceptive methods...]"
+
+IDENTIFIED CLAIMS:
+1. Estrogen-containing pills increase clot risk 3-4x ✓ (specific number!)
+2. Risk is highest at start ✓
+3. Risk decreases but doesn't return to baseline ✓
+
+QUESTIONS:
+- Do hormonal contraceptive pills containing estrogen increase the risk of blood clots by 3 to 4 times compared to non-use?
+- Is the risk of blood clots from hormonal contraceptive pills highest immediately after starting the medication?
+- Does the risk of blood clots from hormonal contraceptive pills ever fully return to baseline after discontinuing use?
+
+---
+
+### Example 4: Causal Relationship Claims
+PASSAGE: "Regular aerobic exercise strengthens the heart muscle, improves blood vessel function, and enhances oxygen delivery to tissues. Studies consistently show that adults who engage in moderate aerobic exercise for at least 150 minutes per week have significantly lower rates of cardiovascular disease."
+
+FULL_DOCUMENT: "[Background on cardiovascular health...]"
+
+IDENTIFIED CLAIMS:
+1. Exercise strengthens heart muscle ✓
+2. Exercise improves blood vessel function ✓
+3. 150 minutes/week moderate exercise → lower CVD rates ✓
+
+QUESTIONS:
+- Does regular aerobic exercise strengthen the heart muscle and improve blood vessel function?
+- Do adults who engage in at least 150 minutes per week of moderate aerobic exercise have significantly lower rates of cardiovascular disease?
+
+---
+
+### Example 5: Specific Recommendations/Procedures
+PASSAGE: "When removing a Foley catheter, first deflate the balloon by drawing water into a syringe placed on the balloon port. Apply gentle, steady traction to the catheter—do not use force. If resistance is encountered, wait 30 seconds and try again gently rather than pulling harder."
+
+FULL_DOCUMENT: "[Medical procedures for catheter management...]"
+
+IDENTIFIED CLAIMS:
+1. Deflate balloon before removing ✓
+2. Use gentle traction, not force ✓
+3. If resistance occurs, wait 30 seconds and retry gently ✓
+
+QUESTIONS:
+- Is it necessary to deflate the balloon before removing a Foley catheter?
+- Should a Foley catheter be removed with gentle traction rather than forceful pulling?
+- If resistance is encountered while removing a Foley catheter, should you wait 30 seconds and try again gently?
+
+---
+
+### Example 6: Exclude Vague Generalizations
+PASSAGE: "Climate change affects many ecosystems around the world. Some species may face challenges from changing temperatures and precipitation patterns."
+
+FULL_DOCUMENT: "[Environmental science background...]"
+
+IDENTIFIED CLAIMS: None specific enough
+- "affects many ecosystems" - vague, not testable against other sources
+- "may face challenges" - conditional, no specific claim
+- No numbers, specific species, or measurable impacts
+
+QUESTIONS: N/A — the passage contains only vague generalizations without specific, verifiable claims.
+
+---
+
+## What NOT to Generate
+
+❌ "Is climate change important?" (opinion-based)
+❌ "What does the author think about vaccines?" (author perspective)
+❌ "Does the passage mention COVID-19?" (meta-question about the text)
+❌ "Is it important to exercise?" (subjective value judgment)
+❌ "How has the world changed?" (vague, immeasurable)
+
+## What TO Generate
+
+✓ "Do adults who exercise 150 minutes per week have lower cardiovascular disease rates?"
+✓ "Can Multisystem Inflammatory Syndrome in Children affect infants younger than 1 year old?"
+✓ "Is the recommended daily sodium intake less than 2,300 milligrams?"
+
+---
 
 ## Your Task
 
 PASSAGE: {passage}
 FULL_DOCUMENT: {full_document}
+
+Generate 2-4 YES/NO questions targeting the most important verifiable factual claims. If the passage lacks verifiable claims, respond with: "N/A — [brief reason]"
+
+For each claim you identify, consider:
+1. Is this a specific, measurable fact (number, date, causal relationship)?
+2. Could this fact be contradicted by another source?
+3. Is the question self-contained and understandable without the passage?
+
 QUESTIONS:

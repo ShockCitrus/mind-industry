@@ -1,27 +1,121 @@
-You will receive a PASSAGE and a QUESTION based on the passage. Your task is to generate a concise search queries that effectively capture the user's intent to retrieve relevant information from a different database or search engine to look for contradictory information to the given passage.
+You are an expert information retrieval specialist. Given a PASSAGE and a QUESTION about that passage, your task is to generate search queries that will effectively retrieve documents containing contradictory information.
 
-#### TASK BREAKDOWN ####
-1. Focus on the main concepts and avoid extraneous details.
-2. Expand acronyms and abbreviations to their full forms (e.g., write Multisystem Inflammatory Syndrome in Children instead of MIS-C).
-3. Ensure the query aligns with the **intent** of the user's question while maintaining brevity.
-4. If you generate more than one query, separate them with a semicolon.
+## Task Breakdown
 
-#### EXAMPLES ####
+1. **Identify the core claim** being questioned: What factual assertion does the question target?
+2. **Extract key entities and concepts**: Names, numbers, relationships, causal statements
+3. **Expand and clarify**: Write full forms (MIS-C → Multisystem Inflammatory Syndrome in Children)
+4. **Create retrieval-optimized queries**: Formulate queries that a search engine would use to find related information
+5. **Generate multiple perspectives**: Create 2-3 queries if needed to capture different angles of potential contradiction
 
-PASSAGE: Risk factors: Children diagnosed with MIS-C are often between the ages of 5 and 11 years old. But cases are reported among children ages 1 to 15. A few cases have also happened in older kids and in babies.
+## Query Design Principles
 
-QUESTION: Can children with Multisystem Inflammatory Syndrome in Children (MIS-C) be as young as 1 year old?
+- **Be specific**: Include named entities, numbers, dates, and specific relationships
+- **Use natural language**: Write queries as if asking a search engine, not a database
+- **Expand abbreviations**: Full forms are more likely to match diverse sources
+- **Focus on the claim, not the context**: Query targets the factual assertion, not surrounding details
+- **Include alternative wordings**: Different sources may phrase the same fact differently
 
-SEARCH_QUERY: "Multisystem Inflammatory Syndrome in Children (MIS-C) age range; youngest reported case of Multisystem Inflammatory Syndrome in Children (MIS-C)"
+## Examples
 
-PASSAGE: Removing the catheter:\\n- In the morning, remove the catheter.\\n- First, take the water out of the balloon. Place a syringe on the colored balloon port and let the water fill the syringe on its own. If water is not draining into the syringe, gently pull back on the syringe stopper. Do not use force.\\n- Once the amount of water inserted the night before is in the syringe, gently pull out the Foley catheter.\\n- Continue the normal cathing scheduled during the day.\\n- Wash the Foley catheter with warm, soapy water. Then, rinse and lay it on a clean towel to dry for later use.
+### Example 1: Age Range Claim
+PASSAGE: "Risk factors: Children diagnosed with MIS-C are often between the ages of 5 and 11 years old. But cases are reported among children ages 1 to 15. A few cases have also happened in older kids and in babies."
 
-QUESTION: Is it necessary to reuse a Foley catheter after cleaning it?
+QUESTION: "Can children with Multisystem Inflammatory Syndrome in Children (MIS-C) be as young as 1 year old?"
 
-SEARCH_QUERY: "Foley catheter reuse safety; guidelines for single-use vs. reusable Foley catheters"
+CORE CLAIM: Children younger than 1 year can have MIS-C
 
-#### YOUR TASK ####
+SEARCH_QUERIES:
+- "Multisystem Inflammatory Syndrome in Children MIS-C age range children 1 year old"
+- "MIS-C infants babies youngest age reported cases"
+- "Multisystem Inflammatory Syndrome in Children children under 2 years old"
+
+REASONING: The queries capture the core claim (youngest age for MIS-C), use both expanded and abbreviated forms, and provide multiple angles to find sources that might contradict the claim.
+
+---
+
+### Example 2: Medical Procedure Claim
+PASSAGE: "Foley catheters are typically single-use sterile medical devices. After removal, they should be disposed of following medical waste protocols. Reuse is not recommended due to risk of infection and material degradation."
+
+QUESTION: "Is it necessary to reuse a Foley catheter after cleaning it?"
+
+CORE CLAIM: Foley catheters should NOT be reused; they are single-use
+
+SEARCH_QUERIES:
+- "Foley catheter reuse safety guidelines single-use vs reusable"
+- "Foley catheter cleaning and reuse medical standards"
+- "Infection risk reusing disposable Foley catheters"
+
+REASONING: The queries target potential contradictions to the "single-use only" claim. Includes specific concern (infection risk) and alternative terms (reusable, cleaning).
+
+---
+
+### Example 3: Numerical/Threshold Claim
+PASSAGE: "The recommended daily sodium intake for adults is less than 2,300 milligrams per day. A single fast food meal typically contains 1,200-1,500 mg of sodium, meaning one meal can provide 50-65% of the daily recommended limit."
+
+QUESTION: "Is the recommended daily sodium intake for adults less than 2,300 milligrams?"
+
+CORE CLAIM: Daily sodium limit is under 2,300 mg
+
+SEARCH_QUERIES:
+- "recommended daily sodium intake adults 2300 mg guidelines"
+- "daily sodium limit American Heart Association WHO"
+- "sodium intake recommendations health organizations"
+
+REASONING: The queries search for authoritative guideline information that might contradict the 2,300 mg threshold.
+
+---
+
+### Example 4: Causal/Relationship Claim
+PASSAGE: "Studies show that regular physical exercise improves cardiovascular health by increasing heart efficiency and improving blood flow. Adults who exercise 30 minutes daily have lower rates of heart disease."
+
+QUESTION: "Does physical exercise improve cardiovascular health?"
+
+CORE CLAIM: Physical exercise causes improvements in cardiovascular health
+
+SEARCH_QUERIES:
+- "physical exercise cardiovascular health benefits research studies"
+- "does exercise improve heart health blood pressure"
+- "exercise and heart disease prevention clinical evidence"
+
+REASONING: Multiple queries capture the causal relationship from different angles (health benefits, heart disease prevention, mechanisms).
+
+---
+
+### Example 5: Practice/Recommendation Claim
+PASSAGE: "In Scandinavian countries, it's common practice to place newborns outdoors for naps in the winter. Parents believe the cold air and fresh air promote better sleep and stronger immune systems. This practice is considered safe when properly supervised with temperature monitoring."
+
+QUESTION: "Is outdoor infant napping in winter a safe practice?"
+
+CORE CLAIM: Winter outdoor infant napping is safe (in Scandinavian context)
+
+SEARCH_QUERIES:
+- "infant outdoor napping safety cold weather risks Scandinavia"
+- "newborn sleep hygiene fresh air winter guidelines"
+- "exposing infants to cold air temperature thresholds safety"
+
+REASONING: Queries target both the safety claim and the specific cultural context, allowing retrieval of contradictory information about safety.
+
+---
+
+## Guidelines for Query Generation
+
+1. **One claim per query**: Don't mix multiple assertions in a single query
+2. **Use 2-3 variants**: Provide multiple search angles to increase recall
+3. **Keep it concise**: Queries should be 5-12 words for optimal retrieval
+4. **Include context when relevant**: If a claim is specific to a domain (medicine, engineering, etc.), include that context
+5. **Prioritize factual assertions**: Focus on verifiable claims (numbers, dates, relationships) over opinions
+
+## Your Task
 
 PASSAGE: {passage}
 QUESTION: {question}
-SEARCH_QUERY:
+
+Generate 2-3 search queries separated by semicolons. Each query should capture the core claim and be phrased naturally as a search query.
+
+Before generating queries, identify:
+1. What core factual claim does this question target?
+2. What are the key entities, numbers, or relationships?
+3. How might a search engine effectively retrieve related information?
+
+SEARCH_QUERIES:

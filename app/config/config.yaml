@@ -2,7 +2,7 @@
 #     LOGGING CONFIGURATION    #
 ################################
 logger:
-  dir_logger: /data/logs
+  dir_logger: ./logs
   console_log: True
   file_log: True
   log_level: INFO
@@ -65,30 +65,31 @@ mind:
   cannot_answer_personal: I cannot answer the question since the context only contains personal opinions.
   method: TB-ENN
   prompts:
-    question_generation: /src/mind/pipeline/prompts/question_generation.txt
-    subquery_generation: /src/mind/pipeline/prompts/query_generation.txt
-    answer_generation: /src/mind/pipeline/prompts/question_answering.txt
-    contradiction_checking: /src/mind/pipeline/prompts/discrepancy_detection.txt
-    contradiction_checking_dynamic: /src/mind/pipeline/prompts/discrepancy_detection_dynamic.txt
-    relevance_checking: /src/mind/pipeline/prompts/relevance_checking.txt
-    topic_label: /src/mind/pipeline/prompts/topic_label.txt
-    merged_evaluation: /src/mind/pipeline/prompts/merged_evaluation.txt
-    merged_evaluation_dynamic: /src/mind/pipeline/prompts/merged_evaluation_dynamic.txt
+    question_generation: src/mind/pipeline/prompts/question_generation.txt
+    subquery_generation: src/mind/pipeline/prompts/query_generation.txt
+    answer_generation: src/mind/pipeline/prompts/question_answering.txt
+    contradiction_checking: src/mind/pipeline/prompts/discrepancy_detection.txt
+    contradiction_checking_dynamic: src/mind/pipeline/prompts/discrepancy_detection_dynamic.txt
+    relevance_checking: src/mind/pipeline/prompts/relevance_checking.txt
+    topic_label: src/mind/pipeline/prompts/topic_label.txt
+    merged_evaluation: src/mind/pipeline/prompts/merged_evaluation.txt
+    merged_evaluation_dynamic: src/mind/pipeline/prompts/merged_evaluation_dynamic.txt
   # Cost optimization settings (see detection_cost_optimization_guide.md)
   cost_optimization:
-    # (answer + classify in one call)
-    use_merged_evaluation: false # true
-    # Skip LLM-based subquery generation, use questions directly
-    skip_subquery_generation: false # true
-    # Embedding pre-filter threshold (0 = disabled)
-    embedding_prefilter_threshold: 0
-    #
+    # Between these two you may save up to 75% of API calls
+    use_merged_evaluation: true
+    # Strategy 2: Skip LLM-based subquery generation, use questions directly
+    skip_subquery_generation: true
+    # Strategy 3: Embedding pre-filter threshold (0 = disabled)
+    embedding_prefilter_threshold: 0.5
+    # Strategy 4: Relevance checking method — "llm" (original) or "local" (cross-encoder)
     relevance_method: "llm"
-    # Maximum questions per source chunk (null = no limit)
-    max_questions_per_chunk: null # 2
-    # Minimum score ratio for retrieved targets (0 = disabled)
-    retrieval_min_score_ratio: 0
-    retrieval_max_k: 5
+    # Raised from 2 → 3: more angles per chunk increases detection surface in bilingual mode.
+    max_questions_per_chunk: 3
+    # Lowered from 0.75 → 0.65: more tolerance for score spread in bilingual retrieval.
+    retrieval_min_score_ratio: 0.35
+    # Raised from 5 → 10: retrieve more candidates before filtering in bilingual setting.
+    retrieval_max_k: 10
   embedding_models:
     multilingual: 
       model: BAAI/bge-m3 # download
