@@ -227,8 +227,25 @@ class MIND:
         self._max_questions_per_chunk = cost_opt.get("max_questions_per_chunk", None)
         self._embedding_prefilter_threshold = cost_opt.get("embedding_prefilter_threshold", 0)
         self._relevance_method = cost_opt.get("relevance_method", "llm")
-        self._retrieval_min_score_ratio = cost_opt.get("retrieval_min_score_ratio", 0)
+        _ratio_raw = cost_opt.get("retrieval_min_score_ratio", 0)
+        if isinstance(_ratio_raw, str) and _ratio_raw.strip().lower() == "dynamic":
+            self._retrieval_min_score_ratio = "dynamic"
+        else:
+            self._retrieval_min_score_ratio = float(_ratio_raw)
         self._retrieval_max_k = cost_opt.get("retrieval_max_k", None)
+
+        # Tier 2A: Cross-encoder reranking
+        self._use_cross_encoder_rerank = cost_opt.get("use_cross_encoder_rerank", False)
+        self._cross_encoder_model_name = cost_opt.get("cross_encoder_model", "BAAI/bge-reranker-v2-m3")
+        self._cross_encoder = None
+        if self._use_cross_encoder_rerank:
+            from sentence_transformers import CrossEncoder
+            self._cross_encoder = CrossEncoder(self._cross_encoder_model_name)
+            self._logger.info(f"Cost optimization: cross-encoder reranker loaded ({self._cross_encoder_model_name})")
+
+        # Tier 2B: Bidirectional retrieval
+        self._use_bidirectional_retrieval = cost_opt.get("use_bidirectional_retrieval", False)
+        self._bidirectional_alpha = cost_opt.get("bidirectional_alpha", 0.6)
 
         # Answer cache: keyed by (chunk_id, normalized_question) -> answer string
         self._answer_cache = {}
@@ -583,9 +600,15 @@ class MIND:
         # generate answer in target language for each subquery and target chunk
         all_target_chunks = []
         for subquery in retrieval_queries:
-            target_chunks = self.target_corpus.retrieve_relevant_chunks(
-                query=subquery, theta_query=source_chunk.metadata["top_k"],
-                top_k=self._retrieval_max_k)  # Strategy 6: respect retrieval_max_k config
+            # Tier 2B: Use bidirectional retrieval if enabled
+            if self._use_bidirectional_retrieval:
+                target_chunks = self.target_corpus.retrieve_relevant_chunks_bidirectional(
+                    query=subquery, theta_query=source_chunk.metadata["top_k"],
+                    top_k=self._retrieval_max_k, alpha=self._bidirectional_alpha)
+            else:
+                target_chunks = self.target_corpus.retrieve_relevant_chunks(
+                    query=subquery, theta_query=source_chunk.metadata["top_k"],
+                    top_k=self._retrieval_max_k)  # Strategy 6: respect retrieval_max_k config
             all_target_chunks.extend(target_chunks)
         # remove duplicates by chunk.id
         len_target_chunks = len(all_target_chunks)
@@ -597,20 +620,43 @@ class MIND:
         self._logger.info(
             f"Retrieved {len_target_chunks} target chunks, {len(all_target_chunks)} unique.")
 
-        # Strategy 6: Score-ratio cutoff — drop chunks whose retrieval score
-        # is below (ratio × best_score). Reduces weak matches entering the loop.
-        if self._retrieval_min_score_ratio > 0 and all_target_chunks:
+        # Strategy 6: Score-ratio cutoff — drop weak chunks before LLM evaluation.
+        # Supports two modes:
+        #   - numeric (e.g. 0.35): percentile-based — keep top 35% of retrieved chunks
+        #   - "dynamic": KneeLocator elbow detection on score distribution
+        if self._retrieval_min_score_ratio and all_target_chunks:
             scores = [tc.metadata.get("score", 0) for tc in all_target_chunks]
-            max_score = max(scores) if scores else 1.0
-            cutoff = self._retrieval_min_score_ratio * max_score
             pre_count = len(all_target_chunks)
+
+            if self._retrieval_min_score_ratio == "dynamic":
+                # Dynamic: find the elbow in the sorted score distribution
+                sorted_scores = sorted(scores, reverse=True)
+                if len(sorted_scores) >= 3:
+                    from kneed import KneeLocator
+                    kl = KneeLocator(
+                        range(len(sorted_scores)), sorted_scores,
+                        curve="convex", direction="decreasing"
+                    )
+                    elbow = kl.knee
+                    cutoff = sorted_scores[elbow] if elbow is not None else sorted_scores[-1]
+                else:
+                    cutoff = min(scores)
+                self._logger.info(
+                    f"Cost optimization: dynamic score cutoff (elbow={cutoff:.3f}) ")
+            else:
+                # Percentile-based: ratio = fraction of chunks to retain
+                ratio = float(self._retrieval_min_score_ratio)
+                cutoff = np.percentile(scores, (1 - ratio) * 100) if ratio > 0 else 0
+
+                self._logger.info(
+                    f"Cost optimization: percentile cutoff ({ratio:.2f} → "
+                    f"p{(1 - ratio) * 100:.0f}={cutoff:.3f}) ")
+
             all_target_chunks = [
                 tc for tc in all_target_chunks
                 if tc.metadata.get("score", 0) >= cutoff
             ]
-            self._logger.info(
-                f"Cost optimization: score-ratio cutoff ({self._retrieval_min_score_ratio}×{max_score:.3f}={cutoff:.3f}) "
-                f"kept {len(all_target_chunks)}/{pre_count} chunks")
+            self._logger.info(f"Score cutoff kept {len(all_target_chunks)}/{pre_count} chunks")
 
         # Strategy 3: Embedding-based pre-filter
         if self._embedding_prefilter_threshold > 0:
@@ -619,6 +665,18 @@ class MIND:
                 question, all_target_chunks, self._embedding_prefilter_threshold)
             self._logger.info(
                 f"Cost optimization: embedding pre-filter kept {len(all_target_chunks)}/{pre_count} chunks")
+
+        # Tier 2A: Cross-encoder reranking — reorder chunks by cross-encoder score
+        if self._use_cross_encoder_rerank and self._cross_encoder is not None and all_target_chunks:
+            pairs = [[question, chunk.text] for chunk in all_target_chunks]
+            ce_scores = self._cross_encoder.predict(pairs, batch_size=32)
+            ranked = sorted(zip(ce_scores, all_target_chunks), key=lambda x: x[0], reverse=True)
+            all_target_chunks = [chunk for _, chunk in ranked]
+            for score, chunk in ranked:
+                chunk.metadata["cross_encoder_score"] = float(score)
+            self._logger.info(
+                f"Cost optimization: cross-encoder reranked {len(all_target_chunks)} chunks "
+                f"(top={float(ranked[0][0]):.3f}, bottom={float(ranked[-1][0]):.3f})")
 
         for target_chunk in all_target_chunks:
             src_id = getattr(source_chunk, "id", None)
@@ -1030,7 +1088,10 @@ class MIND:
                 if chunk_embedding.ndim > 1:
                     chunk_embedding = chunk_embedding.flatten()
 
-                similarity = float(np.dot(question_embedding, chunk_embedding))
+                # Cosine similarity: bounded [-1, 1], stable for cross-lingual
+                q_norm = question_embedding / (np.linalg.norm(question_embedding) + 1e-9)
+                c_norm = chunk_embedding / (np.linalg.norm(chunk_embedding) + 1e-9)
+                similarity = float(np.dot(q_norm, c_norm))
                 if similarity >= threshold:
                     filtered.append(chunk)
                 else:

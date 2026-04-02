@@ -13,7 +13,61 @@ from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 
 from mind.pipeline.retriever import IndexRetriever
-from mind.pipeline.utils import get_doc_top_tpcs  
+from mind.pipeline.utils import get_doc_top_tpcs
+
+
+def postprocess_results(results: list, query_text: str, retriever: IndexRetriever) -> list:
+    """Apply Tier 1/2 improvements to raw retrieval results for A/B ablation."""
+    if not results:
+        return results
+
+    # Tier 1B: Percentile-based score cutoff
+    if USE_PERCENTILE_CUTOFF and len(results) >= 2:
+        scores = [r["score"] for r in results]
+        cutoff = np.percentile(scores, (1 - PERCENTILE_KEEP_RATIO) * 100)
+        results = [r for r in results if r["score"] >= cutoff]
+
+    # Tier 1A: Cosine pre-filter
+    if USE_COSINE_PREFILTER and hasattr(retriever, "encode_queries"):
+        q_emb = retriever.encode_queries(query_text).flatten()
+        q_norm = q_emb / (np.linalg.norm(q_emb) + 1e-9)
+        filtered = []
+        for r in results:
+            doc_text = doc_map.get(r["doc_id"], "")
+            if not doc_text:
+                filtered.append(r)
+                continue
+            c_emb = retriever.encode_queries(doc_text).flatten()
+            c_norm = c_emb / (np.linalg.norm(c_emb) + 1e-9)
+            sim = float(np.dot(q_norm, c_norm))
+            if sim >= COSINE_PREFILTER_THRESHOLD:
+                filtered.append(r)
+        results = filtered
+
+    # Tier 2B: Bidirectional scoring
+    if USE_BIDIRECTIONAL and hasattr(retriever, "encode_queries"):
+        q_emb = retriever.encode_queries(query_text).flatten()
+        q_norm = q_emb / (np.linalg.norm(q_emb) + 1e-9)
+        for r in results:
+            doc_text = doc_map.get(r["doc_id"], "")
+            if doc_text:
+                c_emb = retriever.encode_queries(doc_text).flatten()
+                c_norm = c_emb / (np.linalg.norm(c_emb) + 1e-9)
+                rev_score = float(np.dot(c_norm, q_norm))
+                r["score"] = BIDIRECTIONAL_ALPHA * r["score"] + (1 - BIDIRECTIONAL_ALPHA) * rev_score
+        results = sorted(results, key=lambda r: r["score"], reverse=True)
+
+    # Tier 2A: Cross-encoder reranking
+    if USE_CROSS_ENCODER_RERANK and CROSS_ENCODER is not None:
+        pairs = [[query_text, doc_map.get(r["doc_id"], "")] for r in results]
+        ce_scores = CROSS_ENCODER.predict(pairs, batch_size=32)
+        ranked = sorted(zip(ce_scores, results), key=lambda x: x[0], reverse=True)
+        results = [r for _, r in ranked]
+        for score, r in ranked:
+            r["cross_encoder_score"] = float(score)
+
+    return results
+
 
 def build_or_load_retriever(method: str, model: SentenceTransformer, text_col:str, id_col:str) -> IndexRetriever:
     """
@@ -54,7 +108,7 @@ def run_methods_for_query(
     """
     
     out = {}
-    if topic_based: 
+    if topic_based:
         for tag, key_time, key_results in [
             ("TB-ENN-W", "time_3_weighted", "results_3_weighted"),
             ("TB-ENN", "time_3_unweighted", "results_3_unweighted"),
@@ -71,6 +125,7 @@ def run_methods_for_query(
                 thrs_opt=thrs_opt,
                 do_weighting=do_weighting
                 )
+            res = postprocess_results(res, query_text, retrievers[tag_])
             t1 = time.time()
             out[key_results] = res
             out[key_time] = t1 - t0
@@ -86,6 +141,7 @@ def run_methods_for_query(
                     query=query_text,
                     theta_query=theta_query,
                     )
+                res = postprocess_results(res, query_text, retrievers[tag])
                 t1 = time.time()
                 out[key_results] = res
                 out[key_time] = t1 - t0
@@ -119,7 +175,8 @@ def main():
     # thetas for query
     docid_to_theta_anchor = dict(zip(raw_en[ID_COL].tolist(), thetas_anchor))
 
-    # adapt to the original ID_COL and TEXT_COL
+    # adapt to the original ID_COL and TEXT_COL — global so postprocess_results can access it
+    global doc_map
     doc_map = raw.set_index(ID_COL)[TEXT_COL].to_dict()
 
     # iterate over excel files with questions; there is one file per LLM
@@ -334,6 +391,24 @@ if __name__ == "__main__":
     parser.add_argument("--out_dir", type=str, required=True,
                         help="Output directory for results.")
 
+    # Tier 1/2 improvement toggles for A/B testing
+    parser.add_argument("--use_cosine_prefilter", action="store_true",
+                        help="Tier 1A: Use cosine similarity instead of raw dot product for pre-filtering.")
+    parser.add_argument("--cosine_prefilter_threshold", type=float, default=0.250,
+                        help="Tier 1A: Cosine similarity threshold for pre-filtering (default: 0.250).")
+    parser.add_argument("--use_percentile_cutoff", action="store_true",
+                        help="Tier 1B: Use percentile-based score cutoff instead of ratio×best_score.")
+    parser.add_argument("--percentile_keep_ratio", type=float, default=0.35,
+                        help="Tier 1B: Fraction of chunks to retain (default: 0.35 = top 35%%).")
+    parser.add_argument("--use_cross_encoder_rerank", action="store_true",
+                        help="Tier 2A: Rerank results with a cross-encoder model.")
+    parser.add_argument("--cross_encoder_model", type=str, default="BAAI/bge-reranker-v2-m3",
+                        help="Tier 2A: Cross-encoder model for reranking.")
+    parser.add_argument("--use_bidirectional", action="store_true",
+                        help="Tier 2B: Enable bidirectional (forward + reverse) retrieval scoring.")
+    parser.add_argument("--bidirectional_alpha", type=float, default=0.6,
+                        help="Tier 2B: Weight of forward score vs reverse (default: 0.6).")
+
     args = parser.parse_args()
 
     MODEL_NAME = args.model_name
@@ -357,5 +432,22 @@ if __name__ == "__main__":
 
     OUT_DIR = Path(args.out_dir)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Tier 1/2 improvement globals
+    USE_COSINE_PREFILTER = args.use_cosine_prefilter
+    COSINE_PREFILTER_THRESHOLD = args.cosine_prefilter_threshold
+    USE_PERCENTILE_CUTOFF = args.use_percentile_cutoff
+    PERCENTILE_KEEP_RATIO = args.percentile_keep_ratio
+    USE_CROSS_ENCODER_RERANK = args.use_cross_encoder_rerank
+    CROSS_ENCODER_MODEL = args.cross_encoder_model
+    USE_BIDIRECTIONAL = args.use_bidirectional
+    BIDIRECTIONAL_ALPHA = args.bidirectional_alpha
+
+    # Initialize cross-encoder if needed
+    CROSS_ENCODER = None
+    if USE_CROSS_ENCODER_RERANK:
+        from sentence_transformers import CrossEncoder
+        print(f"Loading cross-encoder: {CROSS_ENCODER_MODEL}...")
+        CROSS_ENCODER = CrossEncoder(CROSS_ENCODER_MODEL)
 
     main()

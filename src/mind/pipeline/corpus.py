@@ -399,3 +399,55 @@ class Corpus:
                 self._logger.warning(f"doc_id {result['doc_id']} not found in dataframe")
 
         return chunks
+
+    def retrieve_relevant_chunks_bidirectional(
+        self, query: str, theta_query=None, top_k: int = None, alpha: float = 0.6
+    ):
+        """Bidirectional retrieval: forward (query→chunks) + reverse (chunk→query) scoring.
+
+        Retrieves 2×top_k candidates via forward retrieval, then re-scores each
+        chunk by computing cosine similarity in reverse (chunk_embedding · query_embedding).
+        Final score = alpha * forward_score + (1 - alpha) * reverse_score.
+
+        Parameters
+        ----------
+        query : str
+            The query text.
+        theta_query : list, optional
+            Topic distribution for the query.
+        top_k : int, optional
+            Number of results to return.
+        alpha : float
+            Weight of forward score vs reverse score. Default 0.6.
+        """
+        if self.retriever is None:
+            raise RuntimeError("No retriever has been set for this corpus.")
+
+        effective_top_k = (top_k or self.retriever.top_k) * 2
+
+        # Forward pass: standard retrieval with extra candidates
+        forward_chunks = self.retrieve_relevant_chunks(query, theta_query, top_k=effective_top_k)
+
+        if not forward_chunks or not hasattr(self.retriever, "encode_queries"):
+            return forward_chunks[: top_k or self.retriever.top_k]
+
+        # Reverse pass: re-score by chunk→query cosine similarity
+        query_emb = self.retriever.encode_queries(query)
+        if query_emb.ndim > 1:
+            query_emb = query_emb.flatten()
+        q_norm = query_emb / (np.linalg.norm(query_emb) + 1e-9)
+
+        for chunk in forward_chunks:
+            chunk_emb = self.retriever.encode_queries(chunk.text)
+            if chunk_emb.ndim > 1:
+                chunk_emb = chunk_emb.flatten()
+            c_norm = chunk_emb / (np.linalg.norm(chunk_emb) + 1e-9)
+            reverse_score = float(np.dot(c_norm, q_norm))
+
+            fwd_score = chunk.metadata.get("score", 0)
+            chunk.metadata["forward_score"] = fwd_score
+            chunk.metadata["reverse_score"] = reverse_score
+            chunk.metadata["score"] = alpha * fwd_score + (1 - alpha) * reverse_score
+
+        forward_chunks.sort(key=lambda c: c.metadata["score"], reverse=True)
+        return forward_chunks[: top_k or self.retriever.top_k]
