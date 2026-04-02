@@ -76,7 +76,7 @@ def sign_up():
         password_rep = request.form.get('password_rep')
 
         if not validate_password(password, password_rep)[0]:
-            return render_template('sign_up.html')
+            return render_template('sign_up.html', email=email, username=username)
 
         try:
             response = requests.post(f"{AUTH_API_URL}/register", json={
@@ -87,7 +87,7 @@ def sign_up():
             })
         except requests.exceptions.RequestException:
             flash("Authentication service unavailable.", "danger")
-            return render_template('sign_up.html')
+            return render_template('sign_up.html', email=email, username=username)
 
         if response.status_code == 201:
             # flash("Account created successfully", "success")
@@ -101,5 +101,6 @@ def sign_up():
             return redirect(url_for('views.home'))
         else:
             flash(response.json().get("error", "Error in server."), "danger")
+            return render_template('sign_up.html', email=email, username=username)
 
     return render_template('sign_up.html')

@@ -8,25 +8,32 @@
             <div class="mb-3">
                 <label for="email" class="form-label">Email Address</label>
                 <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email"
-                    required>
+                    value="{{ email or '' }}" required>
                 <div class="invalid-feedback">Please enter a valid email address.</div>
             </div>
             <div class="mb-3">
                 <label for="username" class="form-label">Username</label>
                 <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username"
-                    required minlength="3">
+                    value="{{ username or '' }}" required minlength="3">
                 <div class="invalid-feedback">Username must be at least 3 characters long.</div>
             </div>
             <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
                 <input type="password" class="form-control" id="password" name="password"
-                    placeholder="Create a password" required minlength="6">
-                <div class="invalid-feedback">Password must be at least 6 characters long.</div>
+                    placeholder="Create a password" required minlength="8">
+                <ul id="password-requirements" class="list-unstyled mt-2 mb-0 small" style="display:none;">
+                    <li id="req-length"><i class="ph ph-x-circle text-danger me-1"></i>At least 8 characters</li>
+                    <li id="req-special"><i class="ph ph-x-circle text-danger me-1"></i>At least one special character <span class="text-secondary">(!@#$%^&amp;*…)</span></li>
+                </ul>
+                <div class="invalid-feedback">Password does not meet requirements.</div>
             </div>
             <div class="mb-3">
                 <label for="password_rep" class="form-label">Confirm Password</label>
                 <input type="password" class="form-control" id="password_rep" name="password_rep"
                     placeholder="Confirm your password" required>
+                <ul id="match-requirements" class="list-unstyled mt-2 mb-0 small" style="display:none;">
+                    <li id="req-match"><i class="ph ph-x-circle text-danger me-1"></i><span id="match-text">Passwords don't match</span></li>
+                </ul>
                 <div class="invalid-feedback">Passwords do not match.</div>
             </div>
             <div class="d-grid">
@@ -38,20 +45,75 @@
             const password = document.getElementById('password');
             const passwordRep = document.getElementById('password_rep');
 
-            // Check password match on input
-            function checkPasswordMatch() {
-                if (passwordRep.value && password.value !== passwordRep.value) {
+            const SPECIAL_CHARS = '!@#$%^&*(),.?":{}|<>_+=-[]\\;/~`';
+
+            function hasSpecialChar(str) {
+                return str.split('').some(c => SPECIAL_CHARS.includes(c));
+            }
+
+            function setReqState(id, met) {
+                const el = document.getElementById(id);
+                const icon = el.querySelector('i');
+                if (met) {
+                    icon.className = 'ph ph-check-circle text-success me-1';
+                } else {
+                    icon.className = 'ph ph-x-circle text-danger me-1';
+                }
+            }
+
+            function validatePassword() {
+                const val = password.value;
+                const lengthOk = val.length >= 8;
+                const specialOk = hasSpecialChar(val);
+
+                if (val.length > 0) {
+                    document.getElementById('password-requirements').style.display = '';
+                }
+
+                setReqState('req-length', lengthOk);
+                setReqState('req-special', specialOk);
+
+                if (lengthOk && specialOk) {
+                    password.setCustomValidity('');
+                } else {
+                    password.setCustomValidity('Password does not meet requirements');
+                }
+
+                validateMatch();
+            }
+
+            function validateMatch() {
+                const repVal = passwordRep.value;
+
+                if (repVal.length > 0) {
+                    document.getElementById('match-requirements').style.display = '';
+                }
+
+                const matchOk = repVal.length > 0 && password.value === repVal;
+                setReqState('req-match', matchOk);
+
+                const matchText = document.getElementById('match-text');
+                if (matchOk) {
+                    matchText.textContent = 'Passwords match';
+                } else {
+                    matchText.textContent = 'Passwords don\'t match';
+                }
+
+                if (repVal.length > 0 && !matchOk) {
                     passwordRep.setCustomValidity('Passwords do not match');
                 } else {
                     passwordRep.setCustomValidity('');
                 }
             }
 
-            password.addEventListener('input', checkPasswordMatch);
-            passwordRep.addEventListener('input', checkPasswordMatch);
+            password.addEventListener('input', validatePassword);
+            passwordRep.addEventListener('input', validateMatch);
 
             signupForm.addEventListener('submit', function (e) {
-                checkPasswordMatch();
+                validatePassword();
+                validateMatch();
+                document.getElementById('password-requirements').style.display = '';
+                document.getElementById('match-requirements').style.display = '';
                 if (!this.checkValidity()) {
                     e.preventDefault();
                     e.stopPropagation();
