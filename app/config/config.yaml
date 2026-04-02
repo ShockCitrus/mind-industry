@@ -12,8 +12,6 @@ logger:
 ################################
 #   OPTIMIZATION CONFIGURATION #
 ################################
-# Profiles based on profiling results from 2026-02-04
-# See: aux_scripts/profiling/profiling/results/profiling_results_baseline.json
 optimization:
   profile: balanced  # options: balanced, memory_optimized, speed_optimized
   
