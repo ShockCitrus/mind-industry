@@ -90,6 +90,12 @@ mind:
     retrieval_min_score_ratio: 0.35
     # Raised from 5 → 10: retrieve more candidates before filtering in bilingual setting.
     retrieval_max_k: 10
+    # Tier 2A: Cross-encoder reranking after retrieval (default off)
+    use_cross_encoder_rerank: false
+    cross_encoder_model: "BAAI/bge-reranker-v2-m3"
+    # Tier 2B: Bidirectional retrieval — forward + reverse scoring (default off)
+    use_bidirectional_retrieval: false
+    bidirectional_alpha: 0.6  # Weight of forward score vs reverse score
   embedding_models:
     multilingual: 
       model: BAAI/bge-m3 # download
