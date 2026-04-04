@@ -70,6 +70,7 @@ def profile():
                            categories_max=categories_data.get("max", 20))
 
 @profile_bp.route('/upload_dataset', methods=['POST'])
+@login_required_custom
 def upload_dataset():
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400

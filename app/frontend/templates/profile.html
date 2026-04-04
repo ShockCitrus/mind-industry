@@ -470,10 +470,19 @@
             })
                 .then(res => res.json())
                 .then(data => {
-                    showToast(data.message || data.error, data.error ? 'danger' : 'success');
-                    buttonSubmit.disabled = false;
-                    buttonSubmit.textContent = 'Upload Dataset';
-                    resetUploadForm();
+                    if (!data.error) {
+                        showToast(data.message || 'Dataset uploaded successfully.', 'success');
+                        buttonSubmit.disabled = false;
+                        buttonSubmit.textContent = 'Upload Dataset';
+                        resetUploadForm();
+                        // Refresh page to show new dataset in list
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        showToast(data.error, 'danger');
+                        buttonSubmit.disabled = false;
+                        buttonSubmit.textContent = 'Upload Dataset';
+                        resetUploadForm();
+                    }
                 })
                 .catch(err => {
                     console.error(err);

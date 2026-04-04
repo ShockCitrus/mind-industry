@@ -164,4 +164,211 @@ document.addEventListener('DOMContentLoaded', function () {
 {% else %}
 <p>No datasets available.</p>
 {% endif %}
+
+<hr class="mt-5">
+
+<h3 class="mt-4 mb-3">Upload a New Dataset</h3>
+<p class="text-muted small">Upload your dataset files (.csv, .parquet, .zip, .tar, .7z, .md, .yaml, .xml, .txt)</p>
+
+<form id="upload-form" enctype="multipart/form-data">
+    <div class="border rounded p-4 text-center bg-body-secondary" id="drop-zone" style="opacity: 0.8;">
+        <p class="mb-2">Drag & drop your file here, or click to select</p>
+        <input type="file" name="dataset_file" id="file-input" class="d-none"
+            accept=".csv,.parquet,.zip,.tar,.tar.gz,.tar.bz2,.tar.xz,.7z,.md,.yaml,.yml,.xml,.txt" required>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="browse-btn">Choose File</button>
+        <div id="error-message" class="text-danger" style="display: none; margin-top: 5px;">
+            File is too large. Maximum size allowed is 10MB.
+        </div>
+        <p class="mt-2 text-muted small" id="file-name"></p>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="d-flex align-items-center" style="gap: 10px;">
+            <label for="action-select" class="mb-0 small">Choose a Stage:</label>
+            <select id="action-select" name="action" class="form-select form-select-sm" required style="width: auto;">
+                <option value="" disabled selected>Select an option</option>
+                <option value="1_RawData">Raw Data</option>
+                <option value="2_PreprocessData">Preprocessed Data</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="sep-csv" style="display: none;" class="mb-0">
+        <hr class="my-2">
+        <label for="sep-select" class="form-label small">Indicate a separator for csv:</label>
+        <select id="sep-select" name="sep-csv" class="form-select form-select-sm">
+            <option value="" disabled selected>Select an option</option>
+            <option value=",">,</option>
+            <option value=";">;</option>
+        </select>
+    </div>
+
+    <div id="textColumn" style="display: none;" class="mb-0">
+        <hr class="my-2">
+        <label for="textColInput" class="form-label small">Text Column:</label>
+        <input class="form-control form-control-sm" id="textColInput" placeholder="Text Column" value="">
+    </div>
+
+    <hr class="my-2">
+    <button type="submit" class="btn btn-sm btn-success" id="btn-success-files">Upload Dataset</button>
+</form>
+
+<!-- Upload Form JavaScript -->
+<script>
+    const fileInput = document.getElementById('file-input');
+    const errorMessage = document.getElementById('error-message');
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024;
+
+    fileInput.addEventListener('change', function () {
+        if (this.files && this.files[0]) {
+            const fileSize = this.files[0].size;
+
+            if (fileSize > MAX_SIZE_BYTES) {
+                errorMessage.style.display = 'block';
+                this.value = '';
+            } else {
+                errorMessage.style.display = 'none';
+            }
+        }
+    });
+</script>
+
+<script>
+    const select = document.getElementById('action-select');
+    const textColumn = document.getElementById('textColumn');
+
+    function toggleTextColumn() {
+        if (select.value === '2_PreprocessData') {
+            textColumn.style.display = 'block';
+        } else {
+            textColumn.style.display = 'none';
+        }
+    }
+    toggleTextColumn();
+
+    select.addEventListener('change', toggleTextColumn);
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const browseBtn = document.getElementById('browse-btn');
+        const fileNameDisplay = document.getElementById('file-name');
+        const uploadForm = document.getElementById('upload-form');
+        const actionSelect = document.getElementById('action-select');
+
+        const sepCsvDiv = document.getElementById('sep-csv');
+        const separatorSelect = document.getElementById('sep-select');
+        const csvSeparatorSelect = document.querySelector('#sep-csv select[name="sep-csv"]');
+
+        function csvSeparatorDisplay(file) {
+            if (file && file.name.toLowerCase().endsWith('.csv')) {
+                sepCsvDiv.style.display = 'block';
+            } else {
+                sepCsvDiv.style.display = 'none';
+            }
+        }
+
+        browseBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            fileNameDisplay.textContent = file?.name || '';
+            csvSeparatorDisplay(file);
+        });
+
+        // Drag & Drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-primary');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-primary');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-primary');
+            const file = e.dataTransfer.files[0];
+
+            if (file) {
+                fileInput.files = e.dataTransfer.files;
+                fileNameDisplay.textContent = file.name;
+                csvSeparatorDisplay(file);
+            }
+        });
+
+        // Reset upload form to initial state
+        function resetUploadForm() {
+            fileInput.value = '';
+            fileNameDisplay.textContent = '';
+            sepCsvDiv.style.display = 'none';
+        }
+
+        uploadForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const file = fileInput.files[0];
+            if (!file) return showToast("Please select a file first.");
+
+            let stage = actionSelect.value;
+            if (!stage) return showToast("Please select a stage.");
+
+            const buttonSubmit = document.getElementById('btn-success-files')
+            buttonSubmit.disabled = true;
+            buttonSubmit.textContent = 'Uploading...';
+
+            stage = stage.replace(/\s+/g, "_");
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('stage', stage);
+
+            const esCsv = file.name.toLowerCase().endsWith('.csv');
+            if (esCsv) {
+                const separator = csvSeparatorSelect.value;
+                if (!separator) {
+                    showToast("Please select a separator for the CSV file.");
+                    buttonSubmit.disabled = false;
+                    buttonSubmit.textContent = 'Upload Dataset';
+                    return;
+                }
+                formData.append('sep', separator);
+            }
+
+            const textCol = document.getElementById('textColInput').value.trim()
+            if (document.getElementById('textColumn').style.display != 'none') {
+                if (textCol === '') {
+                    showToast("Please indicate the text column for the raw data.");
+                    buttonSubmit.disabled = false;
+                    buttonSubmit.textContent = 'Upload Dataset';
+                    return;
+                }
+                formData.append('textColumn', textCol);
+            }
+
+            fetch('/upload_dataset', {
+                method: 'POST',
+                body: formData
+            })
+                .then(res => res.json())
+                .then(data => {
+                    showToast(data.message || data.error, data.error ? 'danger' : 'success');
+                    buttonSubmit.disabled = false;
+                    buttonSubmit.textContent = 'Upload Dataset';
+                    resetUploadForm();
+                    // Refresh datasets list after successful upload
+                    setTimeout(() => window.location.reload(), 1500);
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast("Upload failed. Please try again.", "danger");
+                    buttonSubmit.disabled = false;
+                    buttonSubmit.textContent = 'Upload Dataset';
+                    resetUploadForm();
+                });
+        });
+    });
+</script>
+
 {% endblock %}
