@@ -68,9 +68,56 @@ def _process_mind_results(topics: list[int], directory: str) -> Optional[Path]:
             df = df[top + bottom]
             dataframes.append(df)
 
+    # Group by (anchor_passage_id, comparison_passage_id) to collapse duplicate pairs
+    _LABEL_SEVERITY = {
+        "CONTRADICTION": 4,
+        "CULTURAL_DISCREPANCY": 3,
+        "NOT_ENOUGH_INFO": 2,
+        "NO_DISCREPANCY": 1,
+    }
+
+    def _severity(label: str) -> int:
+        return _LABEL_SEVERITY.get(label, 3)
+
+    def _collapse_pairs(df: pd.DataFrame) -> pd.DataFrame:
+        """Collapse multiple rows sharing the same (anchor_passage_id, comparison_passage_id)
+        into a single row. The highest-severity label wins; all questions that produced a
+        positive (non-NO_DISCREPANCY) label are joined with ' | '."""
+        if df.empty:
+            return df
+
+        group_keys = ["anchor_passage_id", "comparison_passage_id"]
+        rows = []
+        for _, group in df.groupby(group_keys, sort=False):
+            # Pick the row with the highest-severity label
+            best_idx = group["label"].map(_severity).idxmax()
+            best_row = group.loc[best_idx].copy()
+
+            # Collect questions from positive-label rows; fall back to all if none positive
+            positive = group[group["label"].map(_severity) > _LABEL_SEVERITY["NO_DISCREPANCY"]]
+            question_pool = positive if not positive.empty else group
+            unique_questions = list(dict.fromkeys(question_pool["question"].dropna().tolist()))
+            best_row["question"] = " | ".join(unique_questions)
+
+            # Reset editable fields — not yet annotated after collapsing
+            best_row["final_label"] = best_row["label"]
+            if "Notes" in best_row.index:
+                best_row["Notes"] = ""
+            if "secondary_label" in best_row.index:
+                best_row["secondary_label"] = ""
+
+            rows.append(best_row)
+
+        return pd.DataFrame(rows).reset_index(drop=True)
+
     output_path = os.path.join(directory, "mind_results.parquet")
     if dataframes:
         result = pd.concat(dataframes, ignore_index=True)
+        result = _collapse_pairs(result)
+        # Re-apply column order after collapsing
+        top = [col for col in order if col in result.columns]
+        bottom = [col for col in result.columns if col not in order]
+        result = result[top + bottom]
         result.to_parquet(output_path)
     else:
         return None

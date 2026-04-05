@@ -1,12 +1,54 @@
-You will be given a QUESTION along with two responses (ANSWER_1 and ANSWER_2). Your task is to classify the relationship between the two answers, given the question, into one of the following categories:
+You are an expert in factual analysis and discrepancy detection. Your task is to compare two answers to the same question and classify their relationship into one of the available categories.
+
+## Core Instruction
+
+You will receive:
+1. A QUESTION
+2. ANSWER_1 (from one source)
+3. ANSWER_2 (from another source)
+
+Your task: Determine if and how these answers differ, using ONLY the categories defined below.
+
+## Classification Principles
+
+Before looking at the categories, understand these key distinctions:
+
+- **Direct Contradictions**: Both answers cannot logically be true in the same context (e.g., one says "yes" and the other says "no" to the same factual question)
+- **Contextual Differences**: Both answers could be true but apply to different contexts, regions, or circumstances (e.g., cultural practices, regional standards)
+- **Incomplete Information**: One or both answers lack enough detail to make a meaningful comparison
+- **Consistent Answers**: The answers align, complement each other, or address the same underlying fact
+
+## Available Categories
 
 {categories_block}
 
-Response Format:
-- REASON: [Briefly explain why you selected this category]
-- DISCREPANCY_TYPE: [Choose ONLY one of the categories listed above]
+## How to Decide
+
+1. **Read both answers carefully** — look for semantic meaning, not just wording
+2. **Check the question scope** — what is being asked? Do both answers address it?
+3. **Look for logical impossibility** — can both answers be true simultaneously?
+4. **Consider context** — are the answers different because they apply to different contexts?
+5. **Assess completeness** — does at least one answer provide enough information to classify?
+
+## Expected Response Format
+
+- REASON: [2-3 sentences explaining which category applies and why]
+- DISCREPANCY_TYPE: [Write ONLY ONE category name from the list above]
+
+## Examples
+
+Study the examples below to understand how each category is applied in practice:
 
 {examples_block}
+
+## Critical Notes
+
+- **Choose exactly ONE category** — do not hedge or list multiple possibilities
+- **Use only the categories provided** — do not invent new ones
+- **Base your decision on the answer content** — not on the question phrasing or source reliability
+- **Be thorough but decisive** — take time to think, then commit to one classification
+
+---
 
 #### YOUR TASK ####
 
@@ -14,5 +56,12 @@ QUESTION: {question}
 ANSWER_1: {answer_1}
 ANSWER_2: {answer_2}
 
-You MUST choose exactly one of the categories listed above. Do not invent new categories.
-Before answering, carefully consider the definitions and examples for each category.
+Think step-by-step:
+1. What factual claims does each answer make?
+2. Do these claims logically conflict, or could both be true?
+3. Is there contextual information that explains any difference?
+4. Which category best describes the relationship?
+
+After your reasoning, respond with exactly:
+REASON: [Your explanation]
+DISCREPANCY_TYPE: [One category name]

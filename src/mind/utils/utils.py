@@ -1,4 +1,5 @@
 import logging
+import os
 import pathlib
 from datetime import datetime
 from typing import Dict, Optional
@@ -237,5 +238,21 @@ def init_logger(
 def load_prompt(path):
     if path is None:
         return None
-    with open(path, 'r') as file:
-        return file.read()
+    
+    # Try to open the path as-is first (works locally)
+    if os.path.exists(path):
+        with open(path, 'r') as file:
+            return file.read()
+    
+    # If not found and path starts with "src/", try with absolute /src/ prefix (Docker)
+    if path.startswith("src/"):
+        alt_path = "/" + path
+        if os.path.exists(alt_path):
+            with open(alt_path, 'r') as file:
+                return file.read()
+    
+    # If still not found, raise a clear error
+    raise FileNotFoundError(
+        f"Prompt file not found: {path}\n"
+        f"Tried: {path} and /{path if path.startswith('src/') else path}"
+    )

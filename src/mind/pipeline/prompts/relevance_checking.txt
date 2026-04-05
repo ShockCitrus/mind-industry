@@ -1,22 +1,99 @@
-Determine whether the passage contains information that directly answers the question. If it does, return YES; otherwise, return NO. Respond with only YES or NO in uppercase.
+You are a passage relevance evaluator. Given a PASSAGE and a QUESTION, determine whether the PASSAGE contains information that would be helpful in answering the QUESTION. Focus on semantic relevance, not exact wording matches.
 
-#### EXAMPLES ####
+## Task Definition
 
-PASSAGE: Puede empezar a ofrecerle a su hijo pequeñas cantidades de agua alrededor de los 6 meses. Si vive en un lugar con agua fluorada, esto le ayudará a prevenir la aparición de caries. Pregúntele al proveedor de atención médica de su hijo cuánta agua debe darle.
+A passage is RELEVANT if it:
+1. Contains direct information that answers the question
+2. Provides context or preconditions needed to understand the answer
+3. Discusses the same topic with related facts (even if indirectly addressing the question)
 
-QUESTION: Are feeding tubes typically employed for infants, and do they have any potential benefits for older children or teenagers in specific cases?
+A passage is NOT RELEVANT if it:
+1. Discusses a different topic entirely
+2. Mentions the topic name but addresses an unrelated aspect
+3. Contains only tangential or peripheral information
 
-RELEVANT: NO
+## Guidelines
 
+- Look for semantic overlap, not keyword matching
+- Consider implicit information (what can be reasonably inferred from the passage)
+- Be inclusive: if a passage has any meaningful connection to answering the question, mark as YES
+- Disregard exact phrasing differences — focus on whether the passage addresses the topic of the question
 
-PASSAGE: La alimentación por sonda también puede ser una buena idea para aquellos niños que pueden comer de forma segura, pero no logran comer suficiente por la boca (incluso con suplementos) como para mantener un peso saludable. En estos casos, la alimentación por sonda puede complementar la rutina habitual de las comidas. Estas alimentaciones también son útiles cuando un niño está creciendo rápidamente y necesita más nutrientes mientras desarrolla habilidades para comer o tiene una enfermedad grave. Después, el tubo puede usarse con menos frecuencia o quitarse.
+## Examples
 
-QUESTION: Are feeding tubes typically employed for infants, and do they have any potential benefits for older children or teenagers in specific cases?
+### Example 1: Direct Answer (Relevant)
+PASSAGE: "The Apgar score is a quick test performed on newborns immediately after birth to assess physical condition. It checks five vital signs: color, heart rate, reflex irritability, muscle tone, and respiration. Scores range from 0 to 10."
+
+QUESTION: "Does the Apgar score help identify infants who may have trouble breathing after birth?"
+
+REASONING: The passage explicitly mentions that respiration (breathing ability) is one of the five vital signs assessed by the Apgar score. This directly answers the question.
 
 RELEVANT: YES
 
-#### YOUR TASK ####
+---
+
+### Example 2: Related but Not Directly Answering (Relevant)
+PASSAGE: "Feeding tubes are sometimes needed for infants who cannot swallow properly due to developmental delays or neurological conditions. Medical professionals monitor tube placement through X-ray imaging before use."
+
+QUESTION: "Are feeding tubes typically employed for infants?"
+
+REASONING: While the passage doesn't say "feeding tubes are used for infants" explicitly, it clearly discusses feeding tube usage in infants and provides context about when and how they're used. This is relevant to answering the question.
+
+RELEVANT: YES
+
+---
+
+### Example 3: Same Topic, Different Aspect (Not Relevant)
+PASSAGE: "The history of diaper folding techniques dates back to the 1970s when cloth diapers became standardized. Various methods were developed for different body types and age groups."
+
+QUESTION: "Does the rectangular fold method involve folding the diaper into a rectangle?"
+
+REASONING: The passage discusses diaper folding history and standards, but does NOT describe any specific folding methods or explain what the rectangular fold method entails. It provides no information to answer the question.
+
+RELEVANT: NO
+
+---
+
+### Example 4: Peripheral Topic, No Useful Information (Not Relevant)
+PASSAGE: "Babies often cry when they are hungry, tired, or uncomfortable. Different types of crying can indicate different needs."
+
+QUESTION: "Are feeding tubes typically employed for infants?"
+
+REASONING: While both passages mention infants, this passage is about infant crying patterns, not feeding tubes or feeding methods. It offers no information relevant to the question about feeding tubes.
+
+RELEVANT: NO
+
+---
+
+### Example 5: Culturally-Specific Context (Relevant)
+PASSAGE: "In Nordic countries, it's common practice to place babies outdoors for daytime naps even in winter, as the cold air is believed to be healthy. Parents monitor the baby through windows or video monitors."
+
+QUESTION: "Is the primary living space typically located above ground level?"
+
+REASONING: While this passage discusses outdoor napping practices rather than living spaces directly, it provides cultural context about Nordic building practices and living arrangements. Some might argue this is tangentially relevant, but the passage does NOT actually address where primary living spaces are located.
+
+RELEVANT: NO
+
+---
+
+### Example 6: Implicit Relevant Information (Relevant)
+PASSAGE: "Blood clots (thrombosis) are a known side effect of hormonal contraceptive methods. Studies show that combination pills containing estrogen increase clot risk by 3-4 times compared to non-hormonal methods."
+
+QUESTION: "Does hormonal contraception increase the risk of blood clots?"
+
+REASONING: While the question asks about "hormonal contraception" broadly and the passage specifically discusses combination pills, it provides directly relevant information about a category of hormonal contraception. The information clearly answers the question.
+
+RELEVANT: YES
+
+---
+
+## Your Task
 
 PASSAGE: {passage}
 QUESTION: {question}
+
+Respond with ONLY "YES" or "NO" in uppercase.
+
+Before responding, briefly consider: Does this passage contain information that would help answer this question?
+
 RELEVANT:

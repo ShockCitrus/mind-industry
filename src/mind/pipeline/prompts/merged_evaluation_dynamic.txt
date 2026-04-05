@@ -1,19 +1,90 @@
-You will be given a QUESTION, a SOURCE_ANSWER (derived from one passage), and a TARGET_PASSAGE. Your tasks are:
+You are an expert in factual analysis and information verification. Your task is to determine if a target passage answers a given question, extract the answer, and classify any discrepancy between source and target answers.
 
-1. Determine whether the TARGET_PASSAGE contains information to answer the QUESTION.
-   If NO, output DISCREPANCY_TYPE: NOT_ENOUGH_INFO and stop.
+## Three-Part Task
 
-2. If YES, extract the answer from the TARGET_PASSAGE and classify the relationship
-   between the SOURCE_ANSWER and the extracted answer into one of the following categories:
+### Part 1: Relevance Assessment
+First, determine: **Does the TARGET_PASSAGE contain information that helps answer the QUESTION?**
+
+- YES: The passage directly addresses the question or provides relevant context
+- NO: The passage discusses an unrelated topic or provides no useful information
+
+If NO, output ONLY: `DISCREPANCY_TYPE: NOT_ENOUGH_INFO` and stop.
+
+If YES, continue to Parts 2 and 3.
+
+### Part 2: Answer Extraction
+If the passage is relevant, extract the answer to the QUESTION from the TARGET_PASSAGE.
+- Be concise but complete
+- Use only information from the passage
+- If the passage doesn't directly answer, explain what information it provides instead
+
+### Part 3: Discrepancy Classification
+Compare the SOURCE_ANSWER with your extracted answer using the categories below.
+
+## Classification Principles
+
+Understanding what separates the categories:
+
+- **Direct Contradictions**: The answers make opposing factual claims that cannot both be true in the same context
+  - Example: One says "recommended limit is 2,300 mg" and the other says "recommended limit is 3,000 mg"
+
+- **Contextual Differences**: Both answers could be true but apply to different contexts, regions, or populations
+  - Example: One describes Nordic cultural practice, the other describes American practice
+
+- **Insufficient Information**: One or both answers lack the detail needed to assess agreement or contradiction
+  - Example: Answers are too vague, address different aspects, or one source lacks relevant information
+
+- **Consistent/Aligned**: The answers agree, complement each other, or describe the same underlying fact
+  - Example: Both say the disease affects children 5-11 years old, even if phrased differently
+
+## Available Categories
 
 {categories_block}
 
-Response Format:
-- TARGET_ANSWER: [Answer derived from the target passage, or "N/A" if not relevant]
-- REASON: [Briefly explain why you selected this category]
-- DISCREPANCY_TYPE: [Choose ONLY one of the categories listed above]
+## How to Decide
+
+**Step 1: Is the passage relevant?**
+- Look for semantic connection, not keyword matching
+- Consider implicit information (what can be inferred)
+- Even tangential information that provides context counts as relevant
+
+**Step 2: Extract the target answer**
+- Read carefully for the specific fact being questioned
+- Quote or paraphrase from the passage
+- If the passage doesn't fully answer, note what it does provide
+
+**Step 3: Compare the answers**
+- Do they make the same claim?
+- Do they contradict (logically incompatible)?
+- Do they reflect different but valid contexts?
+- Is there too little information to judge?
+
+**Step 4: Choose one category**
+- Consider all four options carefully
+- Select the BEST fit, not a compromise
+- If borderline, choose the more conservative classification
+
+## Expected Response Format
+
+- TARGET_ANSWER: [Answer extracted from the passage, or "N/A" if not relevant]
+- REASON: [2-3 sentences: Does the passage answer the question? Do the answers agree or contradict?]
+- DISCREPANCY_TYPE: [Write ONLY ONE category name from the list above]
+
+## Examples
+
+Study the examples below to understand how each category is applied:
 
 {examples_block}
+
+## Critical Notes
+
+- **Relevance first**: If you mark NOT_ENOUGH_INFO, no need to compare answers
+- **Semantic matching**: Don't require identical phrasing — compare meaning
+- **One category only**: Choose the single best fit; don't list alternatives
+- **Use only provided categories**: Do not invent new discrepancy types
+- **Be decisive**: Take time to analyze, then commit to one classification
+
+---
 
 #### YOUR TASK ####
 
@@ -21,5 +92,13 @@ QUESTION: {question}
 SOURCE_ANSWER: {answer_s}
 TARGET_PASSAGE: {target_passage}
 
-You MUST choose exactly one of the categories listed above. Do not invent new categories.
-Before answering, carefully consider the definitions and examples for each category.
+Think step-by-step:
+1. Is the TARGET_PASSAGE relevant to the QUESTION? (Look for semantic connection)
+2. If YES: What answer does the passage provide?
+3. Do the SOURCE_ANSWER and TARGET_ANSWER agree, contradict, or is there insufficient info?
+4. Which category best describes the relationship?
+
+After your reasoning, respond with exactly:
+TARGET_ANSWER: [Answer from passage or "N/A"]
+REASON: [Your explanation]
+DISCREPANCY_TYPE: [One category name]
