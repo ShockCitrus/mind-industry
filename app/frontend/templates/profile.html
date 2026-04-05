@@ -498,18 +498,17 @@
 <hr class="mt-5">
 
 <!-- Danger Zone -->
-<div class="card border-danger mt-4 mb-5">
-    <div class="card-header bg-danger bg-opacity-10 text-danger">
-        <h5 class="mb-0"><i class="ph ph-warning me-2"></i>Danger Zone</h5>
+<div class="card border-secondary mt-4 mb-5" style="border-radius: 0.375rem; overflow: hidden;">
+    <div class="card-header bg-body-secondary border-secondary py-3">
+        <h6 class="mb-0 text-muted"><i class="ph ph-warning me-2"></i>Danger Zone</h6>
     </div>
-    <div class="card-body">
-        <p>Permanently delete <strong>all</strong> your data from the platform — including raw datasets, preprocessed
+    <div class="card-body py-3">
+        <p class="mb-2">Permanently delete <strong>all</strong> your data from the platform — including raw datasets, preprocessed
             data, topic models, detection results, and pipeline logs.</p>
-        <p class="text-danger mb-3"><small><strong>This action is irreversible.</strong> All files under your account
-                will be permanently removed.</small></p>
-        <button type="button" class="btn btn-outline-danger d-flex align-items-center gap-2" id="btn-erase-all"
-            style="padding: 10px 22px; font-size: 1rem;">
-            <i class="ph ph-trash" style="font-size: 1.2rem;"></i> Delete All My Data
+        <p class="text-danger mb-3"><small><strong>This action is irreversible.</strong></small></p>
+        <button type="button" class="btn btn-danger d-flex align-items-center gap-2" id="btn-erase-all"
+            style="padding: 8px 16px; font-size: 0.95rem;">
+            <i class="ph ph-trash" style="font-size: 1rem;"></i> Delete All My Data
         </button>
     </div>
 </div>
@@ -518,29 +517,27 @@
 <div class="modal fade" id="eraseModal" tabindex="-1" aria-labelledby="eraseModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-danger bg-opacity-10">
-                <h5 class="modal-title text-danger" id="eraseModalLabel">
-                    <i class="ph ph-warning me-2"></i>Confirm Full Data Erasure
+            <div class="modal-header">
+                <h5 class="modal-title" id="eraseModalLabel">
+                    <i class="ph ph-warning text-danger me-2"></i>Confirm Full Data Erasure
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>You are about to <strong>permanently delete all your data</strong>. This includes:</p>
-                <ul>
+                <ul class="mb-3">
                     <li>Raw and preprocessed datasets</li>
                     <li>Topic model outputs</li>
                     <li>Detection results and checkpoints</li>
                     <li>Pipeline logs and API keys</li>
                 </ul>
-                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
-                <hr>
+                <p class="text-danger fw-semibold mb-3"><i class="ph ph-warning-circle me-1"></i>This action cannot be undone.</p>
                 <label for="eraseConfirmInput" class="form-label">Type <code>DELETE</code> to confirm:</label>
                 <input type="text" class="form-control" id="eraseConfirmInput" placeholder="DELETE" autocomplete="off">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmEraseBtn" disabled>Permanently Delete All
-                    Data</button>
+                <button type="button" class="btn btn-danger" id="confirmEraseBtn" disabled>Delete All Data</button>
             </div>
         </div>
     </div>
