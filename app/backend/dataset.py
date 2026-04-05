@@ -339,6 +339,11 @@ def erase_user_data():
             df = df[df["Usermail"] != email]
             df.to_parquet(DATASETS_STAGE, engine="pyarrow", index=False)
 
+        # Recreate empty folder structure so user can upload new datasets
+        os.makedirs(user_dir, exist_ok=True)
+        for folder in ["1_RawData", "2_PreprocessData", "3_TopicModel", "4_Detection"]:
+            os.makedirs(os.path.join(user_dir, folder), exist_ok=True)
+
         return jsonify({"message": "All data erased"}), 200
     except Exception as e:
         return jsonify({"error": f"Failed to erase data: {str(e)}"}), 500
