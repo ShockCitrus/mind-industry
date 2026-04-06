@@ -1,13 +1,18 @@
 <h1 align="center">MIND — Multilingual Inconsistent Notion Detection</h1>
 <p align="center">
+  <em>A lightweight CLI for detecting contradictions and factual discrepancies in multilingual text databases</em>
+</p>
+
+<p align="center">
   <img src="figures_tables/Raupi5.png" alt="MIND pipeline" width="100%">
 </p>
 
 <p align="center">
-  <a href="docs/technical-documentation.md"><strong>Docs</strong></a> · 
-  <a href="https://huggingface.co/collections/lcalvobartolome/mind-data-68e2a690025b4dc28c5e8458"><strong>Datasets</strong></a> ·
+  <a href="#quick-start"><strong>Quick Start</strong></a> · 
   <a href="#installation"><strong>Install</strong></a> · 
-  <a href="#usage"><strong>Usage</strong></a>
+  <a href="#usage"><strong>CLI Reference</strong></a> · 
+  <a href="docs/technical-documentation.md"><strong>Docs</strong></a> · 
+  <a href="https://huggingface.co/collections/lcalvobartolome/mind-data-68e2a690025b4dc28c5e8458"><strong>Datasets</strong></a>
 </p>
 
 <p align="center">
@@ -63,29 +68,31 @@ Raw Data → Segmenter → Translator → Data Preparer → Topic Model → MIND
 
 ## Installation
 
-Install the MIND CLI with `uv tool`:
+Install the MIND CLI with a single command using [`uv tool`](https://docs.astral.sh/uv/guides/tools/):
 
 ```bash
-# Install with Python 3.12
 uv tool install cli-mind-industry --python 3.12
-
-# Verify installation
-mind --help
 ```
 
 **Requirements:**
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package installer)
 - Python 3.12+
 
+**Verify installation:**
+
+```bash
+mind --help
+```
+
 ---
 
-## Usage
+## Quick Start
 
-The MIND CLI is a lightweight, headless interface for discrepancy detection in large-scale text databases. Run the full pipeline with a single command, or use individual subcommands for each stage.
+The MIND CLI is a lightweight, headless command-line interface for detecting contradictions and factual discrepancies in large-scale text databases. Run the full pipeline with a single command, or use individual subcommands for preprocessing and analysis.
 
-### Quick Start
+### First Run
 
-**1. Scaffold a configuration file:**
+**1. Create a configuration file:**
 
 ```bash
 mind detect init-config --output run_config.yaml
@@ -127,20 +134,22 @@ mind detect run --config run_config.yaml --dry-run
 mind detect run --config run_config.yaml --log-file pipeline.log
 ```
 
-### Command Reference
+### CLI Command Reference
+
+The MIND CLI is organized into three main command groups:
 
 ```
 mind
-├── detect               Discrepancy detection
-│   ├── run             Run the full MIND pipeline
-│   └── init-config     Scaffold a run_config.yaml template
-├── data                 Data preprocessing
+├── detect               Discrepancy detection pipeline
+│   ├── run             Run the full MIND pipeline end-to-end
+│   └── init-config     Generate a configuration template (run_config.yaml)
+├── data                 Data preprocessing and preparation
 │   ├── segment         Segment raw documents into passages
 │   ├── translate       Translate passages between languages
-│   └── prepare         Run NLPipe preprocessing and DataPreparer
+│   └── prepare         Prepare data with NLPipe and DataPreparer
 └── tm                   Topic modeling
     ├── train           Train a topic model (Polylingual or LDA)
-    └── label           Generate topic labels using an LLM
+    └── label           Generate human-readable topic labels using an LLM
 ```
 
 Run any command with `--help` for full options:
@@ -240,39 +249,40 @@ tm:
     lang2: DE
 ```
 
-### Example Workflow
+### Full CLI Workflow
+
+This example shows how to use the MIND CLI to process raw data through the entire pipeline:
 
 ```bash
-# 1. Scaffold config
+# 1. Generate a config template
 mind detect init-config --output my_config.yaml
 # Edit my_config.yaml with your paths and settings
 
-# 2. Segment documents (optional — if starting from raw text)
+# 2. [Optional] Segment raw documents into passages
 mind data segment --config my_config.yaml
 
-# 3. Translate passages (optional — for bilingual datasets)
-#    Use --bilingual if your dataset has mixed languages (e.g. EN+ES in one file).
-#    Splits by language, translates both directions, and outputs two ready-to-use files.
+# 3. [Optional] Translate passages for multilingual consistency checks
+#    Use --bilingual for mixed-language datasets (EN+ES rows in same file)
+#    Automatically splits by language, translates both directions
 mind data translate --config my_config.yaml --bilingual
 
-# 4. Prepare for topic modeling (optional)
-#    After --bilingual translation, set prepare.anchor and prepare.comparison
-#    to the two output files: translated_en2es and translated_es2en
+# 4. [Optional] Prepare data with NLPipe and DataPreparer
+#    Required before topic modeling. Follows bilingual translation.
 mind data prepare --config my_config.yaml
 
-# 5. Train topic model (optional)
+# 5. [Optional] Train a topic model (Polylingual or LDA)
 mind tm train --config my_config.yaml
 
-# 6. Label topics with LLM (optional)
+# 6. [Optional] Label topics using your configured LLM
 mind tm label --config my_config.yaml --llm-model llama3.3:70b
 
-# 7. Run discrepancy detection
+# 7. Run discrepancy detection on selected topics
 mind detect run --config my_config.yaml --topics 1,5,10
 ```
 
 ### Bilingual Translation
 
-If your dataset has **mixed languages** (e.g. EN and ES rows in the same file), use `--bilingual`. This mirrors what the web application does under the hood:
+If your dataset has **mixed languages** (e.g. EN and ES rows in the same file), use the `--bilingual` flag. This automatically:
 
 ```
 Mixed dataset (EN + ES rows)
@@ -312,37 +322,43 @@ data:
 mind data translate --config my_config.yaml --bilingual
 ```
 
-### Advanced Features
+### Advanced CLI Features
 
-**Graceful Shutdown:** The CLI handles `Ctrl+C` gracefully, flushing all pending checkpoints before exiting.
+**Graceful Shutdown**  
+The CLI handles `Ctrl+C` gracefully, flushing all pending checkpoints before exiting.
 
-**Custom System Config:** If `config/config.yaml` is not found:
+**Custom System Configuration**  
+Override the default `config/config.yaml`:
 ```bash
 mind detect run --config my_config.yaml --system-config /custom/path/config.yaml
-# Or set environment variable:
+
+# Or use an environment variable:
 export MIND_CONFIG_PATH=/custom/path/config.yaml
 mind detect run --config my_config.yaml
 ```
 
-**Supported Language Pairs for Translation:**
-- English ↔ Spanish (`en`↔`es`)
-- English ↔ German (`en`↔`de`)
-- English ↔ Italian (`en`↔`it`)
+**Supported Language Pairs**  
+The CLI translation commands support:
+- English ↔ Spanish (`en` ↔ `es`)
+- English ↔ German (`en` ↔ `de`)
+- English ↔ Italian (`en` ↔ `it`)
 
-**Topic Indexing:** Topics in config files are **1-indexed** (e.g., `topics: [1, 5, 10]`). The CLI converts them to 0-indexed internally when calling the pipeline.
+**Topic Indexing Convention**  
+Topics in config files use **1-indexing** (e.g., `topics: [1, 5, 10]`). The CLI automatically converts to 0-indexed internally when running the pipeline.
 
 ### Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| `Config file not found` | Verify path in `--config` or set `MIND_CONFIG_PATH` env var |
-| `System config not found` | Place `config/config.yaml` at project root or use `--system-config` |
-| `Import error: mind.cli` | Run `uv pip install -e .` from project root |
-| `Topics must be comma-separated integers` | Use `--topics 1,2,3` (no spaces) |
-| `Unsupported language pair` | Check [supported pairs](#advanced-features) above |
-| Mixed-language output has duplicates | Use `bilingual: true` in translate config (or `--bilingual` flag) |
+| `mind: command not found` | Verify installation: `uv tool install cli-mind-industry --python 3.12` |
+| `Config file not found` | Check path with `--config` or set `MIND_CONFIG_PATH` environment variable |
+| `System config not found` | Ensure `config/config.yaml` exists at project root, or specify with `--system-config` |
+| `Topics must be comma-separated integers` | Use `--topics 1,2,3` format (no spaces) |
+| `Unsupported language pair` | See [Supported Language Pairs](#advanced-cli-features) above |
+| Mixed-language output has duplicates | Enable `--bilingual` flag or set `bilingual: true` in config |
+| Pipeline runs slowly | Check `config/config.yaml` optimization profile (balanced, memory_optimized, speed_optimized) |
 
-For more details, see [docs/deferred_artifacts/cli_detection_feature.md](docs/deferred_artifacts/cli_detection_feature.md).
+For more technical details, see [Technical Documentation](docs/technical-documentation.md).
 
 ---
 
@@ -374,19 +390,17 @@ All pipeline behavior is controlled through [`config/config.yaml`](config/config
 ```
 mind/
 ├── src/mind/                   # Core library
-│   ├── corpus_building/        #   Segmenter, Translator, Data Preparer
-│   ├── topic_modeling/         #   Polylingual Topic Model (PLTM)
-│   ├── pipeline/               #   MIND detection pipeline + prompts
-│   ├── ingestion/              #   Modular data ingestion (archives, parsers, schema mapping)
-│   ├── prompter/               #   LLM backend abstraction layer
-│   ├── cli/                    #   Command-line interface (entry points)
-│   └── utils/                  #   Shared utilities and helpers
-├── config/                     # Pipeline configuration (config.yaml)
-├── tests/                      # Automated test suite
-├── ablation/                   # Ablation study scripts and notebooks
-├── use_cases/                  # Applied use cases (e.g., Wikipedia EN-DE)
-├── docs/                       # Technical and functional documentation
-└── pyproject.toml              # Python packaging and dependencies
+│   ├── corpus_building/        # Document segmentation, translation, preparation
+│   ├── topic_modeling/         # Polylingual Topic Modeling (PLTM)
+│   ├── pipeline/               # MIND detection pipeline and LLM prompts
+│   ├── ingestion/              # Data ingestion (CSV, Parquet, Markdown, etc.)
+│   ├── prompter/               # LLM backend abstraction (OpenAI, Gemini, Ollama, etc.)
+│   ├── cli/                    # Command-line interface entry points
+│   └── utils/                  # Shared utilities
+├── config/                     # System configuration (config.yaml)
+├── tests/                      # Test suite
+├── docs/                       # Technical documentation
+└── pyproject.toml              # Python package metadata and dependencies
 ```
 
 ---
