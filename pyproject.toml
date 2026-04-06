@@ -1,6 +1,6 @@
 [project]
 name = "cli-mind-industry"
-version = "0.2.2-alpha"
+version = "0.2.3.2-alpha"
 description = ""
 authors = [{ name = "Lorena Calvo-Bartolomé & Alonso Madroñal de Mesa" }]
 requires-python = "==3.12.*"
@@ -62,10 +62,6 @@ mind = "mind.cli.main:app"
 requires = ["hatchling>=1.26", "pip>=24"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build]
-sources = ["src"]
-exclude = [".venv", "venv", ".git", "dist", "build", "*.spec", ".env", ".env.*"]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/mind"]
 
@@ -74,6 +70,7 @@ include = [
   "/src/mind",
   "/README.md",
   "/pyproject.toml",
+  "/LICENSE",
 ]
 
 [tool.uv]
