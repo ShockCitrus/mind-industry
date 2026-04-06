@@ -4,16 +4,15 @@
 </p>
 
 <p align="center">
-  <a href="https://mind.uc3m.es"><strong>Live Demo</strong></a> · 
   <a href="docs/technical-documentation.md"><strong>Docs</strong></a> · 
   <a href="https://huggingface.co/collections/lcalvobartolome/mind-data-68e2a690025b4dc28c5e8458"><strong>Datasets</strong></a> ·
-  <a href="#installation"><strong>Install</strong></a>
+  <a href="#installation"><strong>Install</strong></a> · 
+  <a href="#usage"><strong>Usage</strong></a>
 </p>
 
 <p align="center">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg">
   <img alt="Python" src="https://img.shields.io/badge/python-3.12-blue.svg">
-  <img alt="Docker" src="https://img.shields.io/badge/docker-compose-2496ED.svg">
 </p>
 
 ---
@@ -37,39 +36,16 @@ MIND addresses this by highlighting and checking for **absolute contextual integ
 
 - **Multi-LLM Backend** — OpenAI, Google Gemini, Ollama, vLLM, and llama.cpp, configurable from a single YAML file. We believe in a BYOL (Bring Your Own LLM) approach.
 - **Polylingual Topic Modeling** — Extract and align topics across languages (EN, ES, DE, IT).
-- **Hybrid Retrieval** — Combines topic-based and embedding-based search with FAISS
-- **Interactive Web Application** — Full preprocessing, topic modeling, and discrepancy analysis through the browser.
-- **Command-Line Interface (CLI)** — Lightweight, headless CLI for large-scale batch processing and automated pipelines.
-- **Modular Data Ingestion** — Upload CSV, Parquet, Markdown, YAML, XML, TXT, or compressed archives (ZIP, TAR, 7z). Neo4j + MongoDB access coming soon...
+- **Hybrid Retrieval** — Combines topic-based and embedding-based search with FAISS.
+- **Lightweight CLI** — Headless command-line interface for large-scale batch processing and automated pipelines.
+- **Modular Data Ingestion** — CSV, Parquet, Markdown, YAML, XML, TXT, or compressed archives (ZIP, TAR, 7z).
 - **Extensible Architecture** — Add new LLM backends, parsers, or embedding models without touching core code.
-- **Native Cloud / On Premise integration** — Deploy on your own infrastructure with Docker or Kubernetes. More cloud providers coming soon...
-
 
 ---
 
-## Architecture
+## Pipeline Architecture
 
-MIND runs as a **4-service Docker stack**:
-
-```
-┌─────────────────────────────────────────────────┐
-│                   Frontend :5050                │
-│         Flask + Jinja2 · User Interface         │
-└────────────┬────────────────────┬───────────────┘
-             │                    │
-     ┌───────▼─────────┐  ┌───────▼─────────┐
-     │ Backend :5001   │  │  Auth :5002     │
-     │ Pipeline Engine │  │  User & Session │
-     │ ML Workloads    │  │  Management     │
-     └───────┬─────────┘  └───────┬─────────┘
-             │                    │
-     ┌───────▼────────────────────▼────────┐
-     │         PostgreSQL :5432            │
-     │         Persistent Storage          │
-     └─────────────────────────────────────┘
-```
-
-The **core pipeline** lives under `src/mind/` and follows this data flow:
+The MIND pipeline follows this data flow:
 
 ```
 Raw Data → Segmenter → Translator → Data Preparer → Topic Model → MIND Pipeline → Results
@@ -87,104 +63,27 @@ Raw Data → Segmenter → Translator → Data Preparer → Topic Model → MIND
 
 ## Installation
 
-### Option 1: Docker (Recommended)
-
-The fastest way to run the full web application.
+Install the MIND CLI with `uv tool`:
 
 ```bash
-# Clone with submodules
-git clone --recurse-submodules https://github.com/lcalvobartolome/mind.git
-cd mind
+# Install with Python 3.12
+uv tool install cli-mind-industry --python 3.12
 
-# Build and start all services
-docker compose build
-docker compose up -d
+# Verify installation
+mind --help
 ```
 
-Access the application at **http://localhost:5050**.
-
-> **Environment files:** Before building, create `.env` files in `app/auth/`, `app/backend/`, and `app/frontend/`. See [`app/README.md`](app/README.md) for required variables.
-
-### Option 2: Local Development (with uv)
-
-For contributing or running the pipeline outside Docker.
-
-```bash
-# Clone with submodules
-git clone --recurse-submodules https://github.com/lcalvobartolome/mind.git
-cd mind
-
-# Install uv (https://docs.astral.sh/uv/getting-started/installation/)
-# Create and activate environment
-uv venv .venv
-source .venv/bin/activate   # Linux/macOS
-# .venv\Scripts\activate    # Windows
-
-# Install the package in editable mode
-uv pip install -e .
-
-# Verify
-python -c "import mind; print('MIND installed successfully')"
-```
-
-**Optional: Install extras for extended functionality**
-
-The MIND package supports optional dependency groups for specialized use cases:
-
-```bash
-# Install NLP-heavy external modules (gensim for advanced topic modeling)
-uv pip install -e ".[nlp-external]"
-
-# Install use-case-specific dependencies (Elasticsearch for some examples)
-uv pip install -e ".[use-cases]"
-
-# Install all optional dependencies
-uv pip install -e ".[nlp-external,use-cases]"
-```
+**Requirements:**
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) (Python package installer)
+- Python 3.12+
 
 ---
 
 ## Usage
 
-### Web Application
+The MIND CLI is a lightweight, headless interface for discrepancy detection in large-scale text databases. Run the full pipeline with a single command, or use individual subcommands for each stage.
 
-After deployment, the web application provides a guided workflow:
-
-1. **Sign up / Log in** — Create an account to manage your datasets
-2. **Upload a dataset** — Via the Profile page (supports CSV, Parquet, ZIP, MD, YAML, XML, TXT)
-3. **Preprocess** — Segment, translate, and prepare your data
-4. **Train a topic model** — Extract polylingual topics from your corpus
-5. **Run detection** — Select topics and configure discrepancy analysis
-6. **Review results** — Interactive table with filtering, labeling, and export
-
-For a visual walkthrough, see the [Web Application Guide](app/README.md).
-
-### CLI Pipeline
-
-The **CLI provides a lightweight, headless interface** for large-scale batch processing and automated pipelines. It wraps the core pipeline without Docker overhead, ideal for server deployments, programmatic use, and massive datasets.
-
-#### Installation
-
-Install the MIND package with CLI support:
-
-```bash
-# Clone with submodules
-git clone --recurse-submodules https://github.com/lcalvobartolome/mind.git
-cd mind
-
-# Create environment
-uv venv .venv
-source .venv/bin/activate   # Linux/macOS
-# .venv\Scripts\activate    # Windows
-
-# Install with CLI entry point
-uv pip install -e .
-
-# Verify
-mind --help
-```
-
-#### Quick Start
+### Quick Start
 
 **1. Scaffold a configuration file:**
 
@@ -228,7 +127,7 @@ mind detect run --config run_config.yaml --dry-run
 mind detect run --config run_config.yaml --log-file pipeline.log
 ```
 
-#### Full Command Reference
+### Command Reference
 
 ```
 mind
@@ -252,7 +151,7 @@ mind data segment --help
 mind tm train --help
 ```
 
-#### Configuration File Format
+### Configuration File Format
 
 Create `run_config.yaml` with the following structure:
 
@@ -341,7 +240,7 @@ tm:
     lang2: DE
 ```
 
-#### Example Workflow
+### Example Workflow
 
 ```bash
 # 1. Scaffold config
@@ -353,8 +252,7 @@ mind data segment --config my_config.yaml
 
 # 3. Translate passages (optional — for bilingual datasets)
 #    Use --bilingual if your dataset has mixed languages (e.g. EN+ES in one file).
-#    This mirrors the web app: splits by language, translates both directions,
-#    and outputs two ready-to-use files (anchor and comparison).
+#    Splits by language, translates both directions, and outputs two ready-to-use files.
 mind data translate --config my_config.yaml --bilingual
 
 # 4. Prepare for topic modeling (optional)
@@ -372,7 +270,7 @@ mind tm label --config my_config.yaml --llm-model llama3.3:70b
 mind detect run --config my_config.yaml --topics 1,5,10
 ```
 
-#### Bilingual Translation
+### Bilingual Translation
 
 If your dataset has **mixed languages** (e.g. EN and ES rows in the same file), use `--bilingual`. This mirrors what the web application does under the hood:
 
@@ -414,7 +312,7 @@ data:
 mind data translate --config my_config.yaml --bilingual
 ```
 
-#### Advanced Features
+### Advanced Features
 
 **Graceful Shutdown:** The CLI handles `Ctrl+C` gracefully, flushing all pending checkpoints before exiting.
 
@@ -433,7 +331,7 @@ mind detect run --config my_config.yaml
 
 **Topic Indexing:** Topics in config files are **1-indexed** (e.g., `topics: [1, 5, 10]`). The CLI converts them to 0-indexed internally when calling the pipeline.
 
-#### Troubleshooting
+### Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
@@ -475,24 +373,19 @@ All pipeline behavior is controlled through [`config/config.yaml`](config/config
 
 ```
 mind/
-├── app/                        # Web application
-│   ├── frontend/               #   Flask frontend (templates, static, routes)
-│   ├── backend/                #   Flask backend (dataset, preprocessing, detection APIs)
-│   ├── auth/                   #   Authentication service (PostgreSQL-backed)
-│   └── README.md               #   Detailed web app documentation
 ├── src/mind/                   # Core library
 │   ├── corpus_building/        #   Segmenter, Translator, Data Preparer
 │   ├── topic_modeling/         #   Polylingual Topic Model (PLTM)
 │   ├── pipeline/               #   MIND detection pipeline + prompts
 │   ├── ingestion/              #   Modular data ingestion (archives, parsers, schema mapping)
 │   ├── prompter/               #   LLM backend abstraction layer
+│   ├── cli/                    #   Command-line interface (entry points)
 │   └── utils/                  #   Shared utilities and helpers
 ├── config/                     # Pipeline configuration (config.yaml)
 ├── tests/                      # Automated test suite
 ├── ablation/                   # Ablation study scripts and notebooks
 ├── use_cases/                  # Applied use cases (e.g., Wikipedia EN-DE)
-├── docs/                       # Technical, functional, and architecture docs
-├── docker-compose.yml          # Multi-service deployment
+├── docs/                       # Technical and functional documentation
 └── pyproject.toml              # Python packaging and dependencies
 ```
 
@@ -536,10 +429,9 @@ See `ablation/` for full instructions and Jupyter notebooks with analysis.
 
 | Document | Audience | Content |
 |----------|----------|---------|
-| [Technical Documentation](docs/technical-documentation.md) | Developers | Stack, architecture, modules, config, deployment |
+| [Technical Documentation](docs/technical-documentation.md) | Developers | CLI architecture, modules, configuration, LLM backends |
 | [Functional Documentation](docs/functional-documentation.md) | Researchers | Methodology, use cases, ablation studies |
-| [Architecture Diagrams](docs/architecture-diagrams.md) | Everyone | 30+ Mermaid diagrams of all system components |
-| [Web App Guide](app/README.md) | Users | Screenshots, env setup, service overview |
+| [Architecture Diagrams](docs/architecture-diagrams.md) | Everyone | Pipeline flow, component interactions, data structures |
 
 ---
 
@@ -566,7 +458,6 @@ MIT License. Copyright (c) 2024 Lorena Calvo-Bartolomé. See [LICENSE](LICENSE) 
 ---
 
 <p align="center">
-  <a href="https://mind.uc3m.es">Live Demo</a> · 
   <a href="https://huggingface.co/collections/lcalvobartolome/mind-data-68e2a690025b4dc28c5e8458">Datasets</a> · 
   <a href="https://github.com/lcalvobartolome/mind">GitHub</a>
 </p>
